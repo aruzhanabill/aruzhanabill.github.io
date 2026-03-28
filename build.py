@@ -1,14 +1,3 @@
-"""
-Build script for the CSI Rockets static site.
-
-Run this from your project folder whenever you add new sessions or cache files:
-
-    python build.py
-
-Reads from cache/ and writes JSON files into data/.
-Commit and push the data/ folder — that is everything the site needs.
-"""
-
 import json
 import math
 from datetime import datetime, timedelta
@@ -18,11 +7,6 @@ import pandas as pd
 
 import pipeline_2025_26 as _p1
 import pipeline_2025_26_b as _p2
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  SESSION REGISTRY — keep in sync with app.py
-#  Add new sessions here the same way you add them to app.py.
-# ══════════════════════════════════════════════════════════════════════════════
 
 SESSIONS = [
     {
@@ -51,27 +35,10 @@ SESSIONS = [
         "events": {},
         "pipeline": _p2,
     },
-    # {
-    #     "id": "sf_0",
-    #     "type": "Static Fire",
-    #     "label": "4/20/2026",
-    #     "tz": "America/New_York",
-    #     "start": datetime(2026, 4, 20, 13, 0),
-    #     "window": timedelta(minutes=60),
-    #     "events": {},
-    #     "pipeline": _p2,
-    # },
 ]
-
-# Maximum data points per session exported to JSON.
-# Higher = more detail when zoomed in, larger files.
-# 30 000 is a good balance (~2–4 MB per session after compression).
 MAX_POINTS = 30_000
 
 DATA_DIR = Path("data")
-
-
-# ── Helpers ────────────────────────────────────────────────────────────────────
 
 def to_json_safe(series: pd.Series) -> list:
     """Convert a pandas Series to a JSON-safe Python list (NaN → null)."""
@@ -82,9 +49,6 @@ def to_json_safe(series: pd.Series) -> list:
         else:
             out.append(round(float(v), 6))
     return out
-
-
-# ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():
     DATA_DIR.mkdir(exist_ok=True)
@@ -103,28 +67,20 @@ def main():
         df = pipeline.fetch_data(sess["tz"], sess["start"], sess["window"])
         df["t_sec"] = (df["ts"] - df["ts"].min()) / 1e6
         print(f"  {len(df):,} rows  ·  {df['t_sec'].max():.1f} s")
-
-        # Uniform downsample
         if len(df) > MAX_POINTS:
             step = len(df) // MAX_POINTS
             df = df.iloc[::step].reset_index(drop=True)
         print(f"  Downsampled to {len(df):,} rows")
-
-        # Collect every column referenced by any plot in this pipeline
         needed_cols: set[str] = set()
         for plot in pipeline.PLOTS:
             cols = plot.columns if isinstance(plot.columns, list) else [plot.columns]
             needed_cols.update(cols)
-
-        # Build data dict
         data: dict = {"t_sec": to_json_safe(df["t_sec"])}
         for col in sorted(needed_cols):
             if col in df.columns and pd.api.types.is_numeric_dtype(df[col]):
                 data[col] = to_json_safe(df[col])
             else:
                 print(f"  Warning: '{col}' missing or non-numeric — skipped")
-
-        # Plot metadata (titles + column lists)
         plots_meta = [
             {
                 "title": p.title,
@@ -145,7 +101,7 @@ def main():
 
         path = DATA_DIR / f"{sess['id']}.json"
         with open(path, "w") as f:
-            json.dump(out, f, separators=(",", ":"))  # compact — smaller file
+            json.dump(out, f, separators=(",", ":"))
 
         size_kb = path.stat().st_size / 1024
         print(f"  Written {path}  ({size_kb:.0f} KB)")
@@ -155,8 +111,6 @@ def main():
             cf_sessions.append(entry)
         else:
             sf_sessions.append(entry)
-
-    # Sessions manifest consumed by index.html on page load
     manifest = {"cold_flow": cf_sessions, "static_fire": sf_sessions}
     manifest_path = DATA_DIR / "sessions.json"
     with open(manifest_path, "w") as f:
@@ -170,7 +124,6 @@ def main():
     print("    git commit -m 'update test data'")
     print("    git push")
     print("="*60 + "\n")
-
 
 if __name__ == "__main__":
     main()

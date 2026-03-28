@@ -33,7 +33,7 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Loading overlay ───────────────────────────────── */
+    
     #loading-overlay {
       display: none;
       position: fixed; inset: 0;
@@ -55,7 +55,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { font-size: 13px; color: var(--text-dim); }
 
-    /* ── Landing ───────────────────────────────────────── */
+    
     #landing {
       min-height: 100vh;
       display: flex;
@@ -168,7 +168,7 @@
       letter-spacing: 0.2px;
     }
 
-    /* ── Viewer ────────────────────────────────────────── */
+    
     #viewer {
       display: none;
       min-height: 100vh;
@@ -219,7 +219,7 @@
       overflow: hidden;
     }
 
-    /* ── Control panel ─────────────────────────────────── */
+    
     #controls {
       position: fixed;
       bottom: 0; left: 0; right: 0;
@@ -314,7 +314,7 @@
       font-family: 'DM Mono', monospace;
     }
 
-    /* ── number input tweak ── */
+    
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
     input[type=number] { -moz-appearance: textfield; }
   </style>
@@ -326,7 +326,6 @@
   <div class="loading-text">Loading session data…</div>
 </div>
 
-<!-- Landing -->
 <div id="landing">
   <div class="wordmark">CSI Rockets</div>
   <h1>Testing Data</h1>
@@ -352,10 +351,9 @@
       <p class="card-hint" id="sf-hint">&nbsp;</p>
     </div>
   </div>
-  <div class="footer-note">Data loads locally</div>
+  <div class="footer-note">Data loads locally · no server required</div>
 </div>
 
-<!-- Viewer -->
 <div id="viewer">
   <div id="viewer-header">
     <button id="btn-back">← Back</button>
@@ -368,7 +366,7 @@
   <div id="controls">
     <div id="preset-row">
       <span class="window-label">Window</span>
-      <!-- preset buttons injected by JS -->
+      
       <span class="custom-sep"></span>
       <span class="custom-label">Custom:</span>
       <input type="number" id="custom-input" placeholder="sec" min="0.1" step="any">
@@ -385,7 +383,7 @@
 </div>
 
 <script>
-// ── Palette (mirrors CSS variables for Plotly) ──────────────────────────────
+
 const P = {
   bgCard:  '#ffffff',
   bgPlot:  '#fafaf8',
@@ -402,17 +400,15 @@ const PRESETS = [
   ['All', null],
 ];
 
-// ── State ───────────────────────────────────────────────────────────────────
 let S = {
-  session:    null,   // loaded JSON
-  dur:        null,   // active window duration (null = All)
+  session:    null,   
+  dur:        null,   
   durLabel:   'All',
   t0:         0,
   plotIds:    [],
   syncing:    false,
 };
 
-// ── Bootstrap ───────────────────────────────────────────────────────────────
 async function init() {
   buildPresetButtons();
   wireControls();
@@ -472,7 +468,6 @@ function wireControls() {
   });
 }
 
-// ── Session loading ─────────────────────────────────────────────────────────
 async function loadSession(id) {
   setLoading(true);
   try {
@@ -496,7 +491,7 @@ function showViewer() {
   document.getElementById('viewer-subtitle').textContent =
     `${S.session.t_max.toFixed(1)} s total`;
 
-  // Build graph card divs
+  
   const graphsDiv = document.getElementById('graphs');
   S.plotIds.forEach(id => { const el = document.getElementById(id); if (el) Plotly.purge(el); });
   graphsDiv.innerHTML = '';
@@ -513,7 +508,7 @@ function showViewer() {
     graphsDiv.appendChild(card);
   });
 
-  // Reset controls
+  
   S.dur = null; S.durLabel = 'All'; S.t0 = 0;
   setActivePreset('All');
   document.getElementById('slider-row').style.display = 'none';
@@ -532,7 +527,6 @@ function goBack() {
   S.session = null; S.plotIds = [];
 }
 
-// ── Plotly rendering ────────────────────────────────────────────────────────
 const BASE_LAYOUT = {
   paper_bgcolor: P.bgCard,
   plot_bgcolor:  P.bgPlot,
@@ -619,7 +613,7 @@ function renderAllPlots() {
       modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
     });
 
-    // Pan sync listener
+    
     document.getElementById(divId).on('plotly_relayout', ed => {
       if (S.syncing) return;
       if (ed['xaxis.range[0]'] !== undefined) {
@@ -638,7 +632,6 @@ function renderAllPlots() {
   });
 }
 
-// ── Range helpers ────────────────────────────────────────────────────────────
 function setRangeAll(t0, t1) {
   S.syncing = true;
   S.plotIds.forEach(id => Plotly.relayout(id, { 'xaxis.range': [t0, t1] }));
@@ -653,7 +646,6 @@ function syncPan(sourceId, x0, x1) {
   S.syncing = false;
 }
 
-// ── Window controls ──────────────────────────────────────────────────────────
 function applyPreset(label, dur) {
   S.dur = dur; S.durLabel = label;
   setActivePreset(label);
@@ -695,20 +687,18 @@ function setActivePreset(active) {
   });
 }
 
-// ── Status bar ───────────────────────────────────────────────────────────────
 function updateStatus(t0, t1) {
   document.getElementById('time-label').textContent = S.dur === null
     ? `t = 0 s \u2192 ${S.session.t_max.toFixed(1)} s  (full run)`
     : `t = ${t0.toFixed(2)} s \u2192 ${t1.toFixed(2)} s  (${S.durLabel} window)`;
 
-  // Count visible points
+  
   const ts = S.session.data.t_sec;
   let n = 0;
   for (let i = 0; i < ts.length; i++) if (ts[i] >= t0 - 1e-9 && ts[i] <= t1 + 1e-9) n++;
   document.getElementById('point-count').textContent = `Showing ${n.toLocaleString()} pts`;
 }
 
-// ── Utility ──────────────────────────────────────────────────────────────────
 function setLoading(v) {
   document.getElementById('loading-overlay').classList.toggle('on', v);
 }
