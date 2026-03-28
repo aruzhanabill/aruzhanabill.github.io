@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+myenv/
+venv/
+.venv/
+*.egg-info/
+
+# Local data cache (do NOT commit — can be hundreds of MB)
+cache/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# The data/ folder IS committed — it's what the site loads.
+# Do not add data/ here.
