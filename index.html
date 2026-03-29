@@ -34,7 +34,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    
     #loading-overlay {
       display: none;
       position: fixed; inset: 0;
@@ -56,7 +55,6 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { font-size: 13px; color: var(--text-dim); }
 
-    
     #landing {
       min-height: 100vh;
       display: flex;
@@ -169,7 +167,6 @@
       letter-spacing: 0.2px;
     }
 
-    
     #viewer {
       display: none;
       min-height: 100vh;
@@ -220,7 +217,6 @@
       overflow: hidden;
     }
 
-    
     #controls {
       position: fixed;
       bottom: 0; left: 0; right: 0;
@@ -315,7 +311,6 @@
       font-family: 'DM Mono', monospace;
     }
 
-    
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
     input[type=number] { -moz-appearance: textfield; }
   </style>
@@ -352,7 +347,7 @@
       <p class="card-hint" id="sf-hint">&nbsp;</p>
     </div>
   </div>
-  <div class="footer-note">Data loads locally </div>
+  <div class="footer-note">Data loads locally</div>
 </div>
 
 <div id="viewer">
@@ -367,7 +362,6 @@
   <div id="controls">
     <div id="preset-row">
       <span class="window-label">Window</span>
-      
       <span class="custom-sep"></span>
       <span class="custom-label">Custom:</span>
       <input type="number" id="custom-input" placeholder="sec" min="0.1" step="any">
@@ -384,7 +378,6 @@
 </div>
 
 <script>
-
 const P = {
   bgCard:  '#ffffff',
   bgPlot:  '#fafaf8',
@@ -402,12 +395,12 @@ const PRESETS = [
 ];
 
 let S = {
-  session:    null,   
-  dur:        null,   
-  durLabel:   'All',
-  t0:         0,
-  plotIds:    [],
-  syncing:    false,
+  session:  null,
+  dur:      null,
+  durLabel: 'All',
+  t0:       0,
+  plotIds:  [],
+  syncing:  false,
 };
 
 async function init() {
@@ -442,8 +435,8 @@ function populateDd(ddId, countId, hintId, list) {
 }
 
 function buildPresetButtons() {
-  const row   = document.getElementById('preset-row');
-  const sep   = document.querySelector('.custom-sep');
+  const row = document.getElementById('preset-row');
+  const sep = document.querySelector('.custom-sep');
   PRESETS.forEach(([lbl, dur]) => {
     const btn = document.createElement('button');
     btn.id        = `preset-${lbl}`;
@@ -488,11 +481,10 @@ function showViewer() {
   document.getElementById('viewer').style.display  = 'block';
 
   document.getElementById('viewer-title').textContent =
-    `${S.session.type} \u2014 ${S.session.label}`;
+    `${S.session.type} — ${S.session.label}`;
   document.getElementById('viewer-subtitle').textContent =
     `${S.session.t_max.toFixed(1)} s total`;
 
-  
   const graphsDiv = document.getElementById('graphs');
   S.plotIds.forEach(id => { const el = document.getElementById(id); if (el) Plotly.purge(el); });
   graphsDiv.innerHTML = '';
@@ -509,7 +501,6 @@ function showViewer() {
     graphsDiv.appendChild(card);
   });
 
-  
   S.dur = null; S.durLabel = 'All'; S.t0 = 0;
   setActivePreset('All');
   document.getElementById('slider-row').style.display = 'none';
@@ -572,7 +563,7 @@ function buildEventAnnotations() {
 }
 
 function renderAllPlots() {
-  const d   = S.session.data;
+  const d = S.session.data;
   const { shapes, annotations } = buildEventAnnotations();
 
   S.session.plots.forEach((plot, i) => {
@@ -614,7 +605,6 @@ function renderAllPlots() {
       modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
     });
 
-    
     document.getElementById(divId).on('plotly_relayout', ed => {
       if (S.syncing) return;
       if (ed['xaxis.range[0]'] !== undefined) {
@@ -635,14 +625,14 @@ function renderAllPlots() {
 
 function setRangeAll(t0, t1) {
   S.syncing = true;
-  S.plotIds.forEach(id => Plotly.relayout(id, { 'xaxis.range': [t0, t1] }));
+  S.plotIds.forEach(id => Plotly.relayout(id, { 'xaxis.range': [t0, t1], 'yaxis.autorange': true }));
   S.syncing = false;
 }
 
 function syncPan(sourceId, x0, x1) {
   S.syncing = true;
   S.plotIds.filter(id => id !== sourceId).forEach(id =>
-    Plotly.relayout(id, { 'xaxis.range': [x0, x1] })
+    Plotly.relayout(id, { 'xaxis.range': [x0, x1], 'yaxis.autorange': true })
   );
   S.syncing = false;
 }
@@ -690,10 +680,9 @@ function setActivePreset(active) {
 
 function updateStatus(t0, t1) {
   document.getElementById('time-label').textContent = S.dur === null
-    ? `t = 0 s \u2192 ${S.session.t_max.toFixed(1)} s  (full run)`
-    : `t = ${t0.toFixed(2)} s \u2192 ${t1.toFixed(2)} s  (${S.durLabel} window)`;
+    ? `t = 0 s → ${S.session.t_max.toFixed(1)} s  (full run)`
+    : `t = ${t0.toFixed(2)} s → ${t1.toFixed(2)} s  (${S.durLabel} window)`;
 
-  
   const ts = S.session.data.t_sec;
   let n = 0;
   for (let i = 0; i < ts.length; i++) if (ts[i] >= t0 - 1e-9 && ts[i] <= t1 + 1e-9) n++;
