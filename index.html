@@ -207,7 +207,7 @@
     }
     #viewer-subtitle { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
-    #graphs { padding: 14px 22px 168px; }
+    #graphs { padding: 14px 22px 220px; }
 
     .graph-card {
       background: var(--bg-card);
@@ -313,6 +313,51 @@
 
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
     input[type=number] { -moz-appearance: textfield; }
+
+    #marker-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+      padding-top: 9px;
+      border-top: 1px solid var(--border);
+      margin-top: 5px;
+    }
+    #marker-time {
+      background: var(--bg-card); color: var(--text);
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: 4px 8px; width: 82px;
+      font-family: 'DM Mono', monospace; font-size: 12.5px;
+      transition: border-color 0.12s;
+    }
+    #marker-time:focus { outline: none; border-color: var(--accent); }
+    #marker-name {
+      background: var(--bg-card); color: var(--text);
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: 4px 8px; width: 140px;
+      font-family: inherit; font-size: 12.5px;
+      transition: border-color 0.12s;
+    }
+    #marker-name:focus { outline: none; border-color: var(--accent); }
+    #btn-add-marker {
+      padding: 4px 12px; font-size: 12px; font-weight: 600;
+      font-family: inherit; border-radius: 5px; cursor: pointer;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text); transition: all 0.12s;
+    }
+    #btn-add-marker:hover { background: var(--bg-card); }
+    .marker-chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 5px 2px 8px; border-radius: 10px;
+      background: var(--bg-card); border: 1px solid #a8bdee;
+      font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-dim);
+    }
+    .chip-del {
+      cursor: pointer; color: var(--text-xs); font-size: 14px;
+      line-height: 1; background: none; border: none; padding: 0;
+      font-family: inherit; margin-left: 1px;
+    }
+    .chip-del:hover { color: var(--text); }
   </style>
 </head>
 <body>
@@ -376,6 +421,15 @@
       <span id="time-label"></span>
       <span id="point-count"></span>
     </div>
+    <div id="marker-row">
+      <span class="window-label">Markers</span>
+      <span class="custom-sep"></span>
+      <input type="number" id="marker-time" placeholder="t (s)" step="any">
+      <input type="text"   id="marker-name" placeholder="label">
+      <button id="btn-add-marker">Add</button>
+      <span class="custom-sep"></span>
+      <div id="marker-chips"></div>
+    </div>
   </div>
 </div>
 
@@ -428,6 +482,7 @@ let S = {
   viewT1:        0,     // current x-axis range end
   highResMode:   false,
   chunkCache:    new Map(),
+  userEvents:    [],    // [{t, label}] — locally-added vertical markers
 };
 
 // ── Sync guard ────────────────────────────────────────────────────────────────
@@ -677,6 +732,13 @@ function wireControls() {
   document.getElementById('custom-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') applyCustom();
   });
+  document.getElementById('btn-add-marker').addEventListener('click', addMarker);
+  document.getElementById('marker-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addMarker();
+  });
+  document.getElementById('marker-time').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('marker-name').focus();
+  });
   document.getElementById('pos-slider').addEventListener('input', e => {
     if (S.dur === null) return;
     S.t0 = parseFloat(e.target.value);
@@ -735,9 +797,13 @@ function showViewer() {
   });
 
   S.dur = null; S.durLabel = 'All'; S.t0 = 0;
+  S.userEvents = [];
   setActivePreset('All');
   document.getElementById('slider-row').style.display = 'none';
   document.getElementById('custom-input').value = '';
+  document.getElementById('marker-time').value = '';
+  document.getElementById('marker-name').value = '';
+  document.getElementById('marker-chips').innerHTML = '';
 
   renderAllPlots();
   updateRefreshBtn();
@@ -750,7 +816,8 @@ function goBack() {
   document.getElementById('landing').style.display = 'flex';
   document.getElementById('dd-cf').value = '';
   document.getElementById('dd-sf').value = '';
-  S.session = null; S.plotIds = [];
+  S.session = null; S.plotIds = []; S.userEvents = [];
+  document.getElementById('marker-chips').innerHTML = '';
 }
 
 const BASE_LAYOUT = {
@@ -780,16 +847,20 @@ const BASE_LAYOUT = {
 
 function buildEventAnnotations() {
   const shapes = [], annotations = [];
-  Object.entries(S.session.events || {}).forEach(([t, label], idx) => {
+  // Merge session events and user-added markers, sorted by time
+  const sessionEvts = Object.entries(S.session.events || {}).map(([t, label]) => ({ t: +t, label, user: false }));
+  const userEvts    = (S.userEvents || []).map(e => ({ ...e, user: true }));
+  const allEvts     = [...sessionEvts, ...userEvts].sort((a, b) => a.t - b.t);
+  allEvts.forEach(({ t, label, user }, idx) => {
     shapes.push({
-      type: 'line', x0: +t, x1: +t, y0: 0, y1: 1, yref: 'paper',
-      line: { color: 'rgba(40,40,40,0.28)', width: 1, dash: 'dash' },
+      type: 'line', x0: t, x1: t, y0: 0, y1: 1, yref: 'paper',
+      line: { color: user ? 'rgba(43,92,230,0.45)' : 'rgba(40,40,40,0.28)', width: 1, dash: 'dash' },
     });
     annotations.push({
-      x: +t, xanchor: 'left',
+      x: t, xanchor: 'left',
       y: idx % 2 === 0 ? 0.97 : 0.12, yref: 'paper',
       text: label, showarrow: false,
-      font: { size: 9, color: P.textDim },
+      font: { size: 9, color: user ? P.accent : P.textDim },
       bgcolor: 'rgba(245,240,232,0.88)', borderpad: 2,
     });
   });
@@ -863,6 +934,52 @@ function syncPan(sourceId, x0, x1) {
     Plotly.relayout(id, { 'xaxis.range': [x0, x1], 'yaxis.autorange': true })
   );
 }
+
+// ── User markers ──────────────────────────────────────────────────────────────
+
+function updateEventOverlays() {
+  const { shapes, annotations } = buildEventAnnotations();
+  setSyncGuard();
+  S.activePlotIds.forEach(id =>
+    Plotly.relayout(id, { shapes, annotations })
+  );
+}
+
+function renderMarkerChips() {
+  const container = document.getElementById('marker-chips');
+  container.innerHTML = '';
+  [...S.userEvents].sort((a, b) => a.t - b.t).forEach(({ t, label }) => {
+    const chip = document.createElement('span');
+    chip.className = 'marker-chip';
+    chip.textContent = `${t.toFixed(2)} s — ${label}`;
+    const del = document.createElement('button');
+    del.className = 'chip-del';
+    del.textContent = '×';
+    del.title = 'Remove marker';
+    del.addEventListener('click', () => deleteMarker(t, label));
+    chip.appendChild(del);
+    container.appendChild(chip);
+  });
+}
+
+function addMarker() {
+  const tVal   = parseFloat(document.getElementById('marker-time').value);
+  const label  = document.getElementById('marker-name').value.trim();
+  if (isNaN(tVal) || !label) return;
+  S.userEvents.push({ t: tVal, label });
+  document.getElementById('marker-time').value = '';
+  document.getElementById('marker-name').value = '';
+  renderMarkerChips();
+  if (S.activePlotIds.length) updateEventOverlays();
+}
+
+function deleteMarker(t, label) {
+  S.userEvents = S.userEvents.filter(e => !(e.t === t && e.label === label));
+  renderMarkerChips();
+  if (S.activePlotIds.length) updateEventOverlays();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function applyPreset(label, dur) {
   S.dur = dur; S.durLabel = label;
