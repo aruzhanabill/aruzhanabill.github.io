@@ -1,15 +1,13 @@
 # Python
-__pycache__/
-*.pyc
 *.pyo
 *.pyd
 myenv/
 venv/
 .venv/
 *.egg-info/
-
-# Local data cache (do NOT commit — can be hundreds of MB)
-cache/
+.DS_Store
+.vscode/
+.idea/
 
 # macOS
 .DS_Store
