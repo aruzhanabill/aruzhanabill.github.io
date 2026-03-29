@@ -32,6 +32,11 @@ PLOTS = [
         ],
     ),
     Plot(
+        "[FsScientific1] E-Reg Angle",
+        ["FsLoxGn2Transducers.current_angle"],
+        state_columns=["ereg_state_closed", "ereg_state_stage1", "ereg_state_stage2"],
+    ),
+    Plot(
         "[FsScientific1] LOX Tank Transducer",
         ["FsLoxGn2Transducers.oxtank_2"],
     ),
@@ -77,6 +82,16 @@ def clean_up(df: pd.DataFrame) -> pd.DataFrame:
     df["LoadCell2.data"] = -df["LoadCell2.data"]
     df["thrust"] = df["LoadCell1.data"] + df["LoadCell2.data"]
     df["thrust"] = df["thrust"].rolling(window=10).median()
+
+    # preserve raw ereg state booleans before stacking (used by angle plot)
+    for raw_col, new_col in [
+        ("FsLoxGn2Transducers.ereg_closed", "ereg_state_closed"),
+        ("FsLoxGn2Transducers.ereg_stage_1", "ereg_state_stage1"),
+        ("FsLoxGn2Transducers.ereg_stage_2", "ereg_state_stage2"),
+    ]:
+        if raw_col in df.columns:
+            df[new_col] = df[raw_col].fillna(False).astype(float)
+
     for i, col in enumerate(
         [
             "FsState.gn2_fill",
