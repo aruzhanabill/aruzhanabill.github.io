@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python build.py)"
+      "Bash(python build.py)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\(''g:/My Drive/Columbia files/ROCKETS/25-26/aruzhanabill.github.io/data/cf_1.json''\\)\\); print\\(list\\(d[''data''].keys\\(\\)\\)[:5], ''...'', list\\(d[''data''].keys\\(\\)\\)[-5:]\\); print\\(''n_plots:'', len\\(d[''plots'']\\)\\); [print\\(i, p[''title''], p[''columns'']\\) for i,p in enumerate\\(d[''plots'']\\)]\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\(''g:/My Drive/Columbia files/ROCKETS/25-26/aruzhanabill.github.io/data/cf_1.json''\\)\\); print\\(list\\(d[''data''].keys\\(\\)\\)[:5], ''...'', list\\(d[''data''].keys\\(\\)\\)[-5:]\\); print\\(''n_plots:'', len\\(d[''plots'']\\)\\); [print\\(i, p[''title''], p[''columns'']\\) for i,p in enumerate\\(d[''plots'']\\)]\")"
     ]
   }
 }

@@ -380,17 +380,24 @@
 </div>
 
 <script>
-const DISPLAY_MAX = 5000;  // max points per trace for normal browsing
+const DISPLAY_MAX   = 5000;  // max points per trace for normal browsing
+const MAX_HR_CHUNKS = 10;    // refuse high-res if view spans more than this many chunks
 
 const STATE_COLORS = {
-  ereg_state_closed: 'rgba(220,50,50,0.25)',
-  ereg_state_stage1: 'rgba(255,165,0,0.25)',
-  ereg_state_stage2: 'rgba(50,190,50,0.25)',
+  ereg_state_closed:  'rgba(220,50,50,0.25)',
+  ereg_state_stage1:  'rgba(255,165,0,0.25)',
+  ereg_state_stage2:  'rgba(50,190,50,0.25)',
+  state_run:          'rgba(34,197,94,0.22)',
+  state_lox_fill_only:'rgba(59,130,246,0.22)',
+  state_gn2_fill_only:'rgba(168,85,247,0.22)',
 };
 const STATE_NAMES = {
-  ereg_state_closed: 'closed',
-  ereg_state_stage1: 'stage 1',
-  ereg_state_stage2: 'stage 2',
+  ereg_state_closed:  'closed',
+  ereg_state_stage1:  'stage 1',
+  ereg_state_stage2:  'stage 2',
+  state_run:          'run',
+  state_lox_fill_only:'lox fill',
+  state_gn2_fill_only:'gn2 fill',
 };
 
 const P = {
@@ -410,16 +417,31 @@ const PRESETS = [
 ];
 
 let S = {
-  session:     null,
-  dur:         null,
-  durLabel:    'All',
-  t0:          0,
-  plotIds:     [],
-  syncing:     false,
-  viewT0:      0,
-  viewT1:      0,
-  highResMode: false,
+  session:       null,
+  dur:           null,
+  durLabel:      'All',
+  t0:            0,
+  activePlots:   [],    // plot configs with at least one data column present (pre-filtered)
+  plotIds:       [],    // div IDs — 1:1 with activePlots; no empty-plot divs are ever created
+  activePlotIds: [],    // subset of plotIds actually rendered (equal to plotIds in normal use)
+  viewT0:        0,     // current x-axis range start (kept in sync for other consumers)
+  viewT1:        0,     // current x-axis range end
+  highResMode:   false,
+  chunkCache:    new Map(),
 };
+
+// ── Sync guard ────────────────────────────────────────────────────────────────
+// Set before ANY programmatic Plotly call that will fire relayout events.
+// Cleared after a short delay so all async echoes are suppressed.
+// This replaces the fragile float-equality echo check (Plotly may return
+// slightly different values than what was set, causing cascading syncs).
+let _syncGuard = false;
+let _syncGuardTimer = null;
+function setSyncGuard() {
+  _syncGuard = true;
+  clearTimeout(_syncGuardTimer);
+  _syncGuardTimer = setTimeout(() => { _syncGuard = false; }, 100);
+}
 
 // ── Data helpers ──────────────────────────────────────────────────────────────
 
@@ -490,25 +512,34 @@ function buildPlotLayout(plot, t0, t1, shapes, annotations) {
   return layout;
 }
 
-// Re-render all plots from the overview data (normal mode)
+// ── Plotly helpers ────────────────────────────────────────────────────────────
+
+// Reload all plots from overview data.
 function reloadFromOverview(viewT0, viewT1) {
   const { shapes, annotations } = buildEventAnnotations();
-  S.session.plots.forEach((plot, i) => {
-    const traces = buildPlotTraces(plot, viewT0, viewT1, DISPLAY_MAX, S.session.data);
+  setSyncGuard();
+  S.activePlots.forEach((plot, i) => {
+    const divId = S.plotIds[i];
+    const traces = buildPlotTraces(plot, 0, S.session.t_max, DISPLAY_MAX, S.session.data);
     if (traces.length === 0) return;
-    Plotly.react(S.plotIds[i], traces, buildPlotLayout(plot, viewT0, viewT1, shapes, annotations));
+    Plotly.react(divId, traces, buildPlotLayout(plot, viewT0, viewT1, shapes, annotations));
   });
 }
 
-// Re-render all plots from already-merged chunk data (high-res mode)
+// Reload all plots from merged chunk data (high-res).
+// Returns a Promise so callers can await completion.
 function reloadFromChunks(mergedData, viewT0, viewT1) {
   const { shapes, annotations } = buildEventAnnotations();
-  S.session.plots.forEach((plot, i) => {
+  setSyncGuard();
+  return Promise.all(S.activePlots.map((plot, i) => {
+    const divId = S.plotIds[i];
     const traces = buildPlotTraces(plot, viewT0, viewT1, null, mergedData);
-    if (traces.length === 0) return;
-    Plotly.react(S.plotIds[i], traces, buildPlotLayout(plot, viewT0, viewT1, shapes, annotations));
-  });
+    if (traces.length === 0) return Promise.resolve();
+    return Plotly.react(divId, traces, buildPlotLayout(plot, viewT0, viewT1, shapes, annotations));
+  }));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Concatenate chunk objects, keeping only rows within [t0, t1]
 function mergeChunks(chunks, t0, t1) {
@@ -537,6 +568,24 @@ async function fetchChunk(sessionId, ci) {
   return data;
 }
 
+function updateRefreshBtn() {
+  const btn = document.getElementById('btn-refresh-res');
+  if (!S.session) return;
+  const cs        = S.session.chunk_seconds;
+  const lo        = Math.max(0, Math.floor(S.viewT0 / cs));
+  const hi        = Math.min(Math.floor(S.viewT1 / cs), S.session.n_chunks - 1);
+  const nChunks   = hi - lo + 1;
+  const tooBig    = nChunks > MAX_HR_CHUNKS;
+  btn.disabled    = tooBig || S.highResMode;
+  btn.title       = tooBig
+    ? `Zoom in to under ${MAX_HR_CHUNKS * cs / 60} min to enable high-res`
+    : S.highResMode ? 'Already in high-res mode' : '';
+  if (!S.highResMode) {
+    btn.classList.remove('active');
+    btn.textContent = '↑ Refresh Res';
+  }
+}
+
 async function refreshResolution() {
   const t0 = S.viewT0, t1 = S.viewT1;
   const cs = S.session.chunk_seconds;
@@ -548,40 +597,31 @@ async function refreshResolution() {
   btn.disabled = true;
 
   try {
-    const chunks  = await Promise.all(
+    const chunks = await Promise.all(
       Array.from({ length: hi - lo + 1 }, (_, k) => fetchChunk(S.session.id, lo + k))
     );
-    const merged  = mergeChunks(chunks, t0, t1);
-    reloadFromChunks(merged, t0, t1);
+    const merged = mergeChunks(chunks, t0, t1);
     S.highResMode = true;
+    S.viewT0 = t0; S.viewT1 = t1;
+    await reloadFromChunks(merged, t0, t1);
     btn.classList.add('active');
     btn.textContent = '✓ High-res';
+    btn.disabled = true;
+    btn.title = 'Already in high-res mode';
     updateStatus(t0, t1, merged.t_sec.length);
   } catch (e) {
     console.error(e);
-    btn.textContent = '↑ Refresh Res';
+    S.highResMode = false;
+    updateRefreshBtn();
   }
-  btn.disabled = false;
 }
 
-// Full exit: reload overview data (use when changing window size)
 function exitHighRes(newT0, newT1) {
   if (!S.highResMode) return;
   S.highResMode = false;
-  const btn = document.getElementById('btn-refresh-res');
-  btn.classList.remove('active');
-  btn.textContent = '↑ Refresh Res';
+  S.viewT0 = newT0; S.viewT1 = newT1;
+  updateRefreshBtn();
   reloadFromOverview(newT0, newT1);
-}
-
-// Soft exit: just reset the flag/button, no data reload
-// Use from inside plotly_relayout handlers to avoid re-entrant Plotly.react calls
-function clearHighResFlag() {
-  if (!S.highResMode) return;
-  S.highResMode = false;
-  const btn = document.getElementById('btn-refresh-res');
-  btn.classList.remove('active');
-  btn.textContent = '↑ Refresh Res';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -643,6 +683,7 @@ function wireControls() {
     const t1 = Math.min(S.t0 + S.dur, S.session.t_max);
     exitHighRes(S.t0, t1);
     setRangeAll(S.t0, t1);
+    updateRefreshBtn();
     updateStatus(S.t0, t1);
   });
 }
@@ -673,11 +714,18 @@ function showViewer() {
   const graphsDiv = document.getElementById('graphs');
   S.plotIds.forEach(id => { const el = document.getElementById(id); if (el) Plotly.purge(el); });
   graphsDiv.innerHTML = '';
-  S.plotIds = [];
+  S.plotIds    = [];
+  S.activePlots = [];
 
-  S.session.plots.forEach((_, i) => {
+  S.session.plots.forEach((plot, i) => {
+    // Skip plots with no main data columns in this session — no div created.
+    // Only check plot.columns, not state_columns (state_run etc. exist in every session).
+    const mainCols = Array.isArray(plot.columns) ? plot.columns : [plot.columns];
+    if (!mainCols.some(c => S.session.data[c] !== undefined)) return;
+
     const id   = `plot-${i}`;
     S.plotIds.push(id);
+    S.activePlots.push(plot);
     const card  = document.createElement('div');
     card.className = 'graph-card';
     const inner = document.createElement('div');
@@ -692,6 +740,7 @@ function showViewer() {
   document.getElementById('custom-input').value = '';
 
   renderAllPlots();
+  updateRefreshBtn();
   updateStatus(0, S.session.t_max);
 }
 
@@ -753,16 +802,19 @@ function renderAllPlots() {
   S.viewT0 = 0;
   S.viewT1 = S.session.t_max;
   S.chunkCache = new Map();
+  S.activePlotIds = [];
   const btn = document.getElementById('btn-refresh-res');
   btn.classList.remove('active');
   btn.textContent = '↑ Refresh Res';
   btn.disabled = false;
 
-  S.session.plots.forEach((plot, i) => {
+  // activePlots/plotIds are already pre-filtered to plots with data (done in showViewer)
+  S.activePlots.forEach((plot, i) => {
     const divId  = S.plotIds[i];
     const traces = buildPlotTraces(plot, 0, S.session.t_max, DISPLAY_MAX, S.session.data);
     if (traces.length === 0) return;
     const layout = buildPlotLayout(plot, 0, S.session.t_max, shapes, annotations);
+    S.activePlotIds.push(divId);
 
     Plotly.newPlot(divId, traces, layout, {
       responsive: true,
@@ -771,56 +823,53 @@ function renderAllPlots() {
     });
 
     document.getElementById(divId).on('plotly_relayout', ed => {
-      if (S.syncing) return;
+      if (_syncGuard) return;  // echo from a programmatic Plotly call — ignore
       if (ed['xaxis.range[0]'] !== undefined) {
         const x0 = +ed['xaxis.range[0]'];
         const x1 = +ed['xaxis.range[1]'];
         S.viewT0 = x0; S.viewT1 = x1;
-        clearHighResFlag();  // depress button, no data reload (safe inside relayout handler)
-        syncPan(divId, x0, x1);  // async — S.syncing stays true until all relayouts resolve
+        setSyncGuard();  // guard before any outgoing sync calls
+        if (S.highResMode) {
+          exitHighRes(x0, x1);
+        } else {
+          syncPan(divId, x0, x1);
+        }
+        updateRefreshBtn();
         updateStatus(x0, x1);
         if (S.dur !== null) {
           S.t0 = Math.max(0, x0);
           document.getElementById('pos-slider').value = S.t0;
         }
       } else if (ed['xaxis.autorange'] === true) {
+        setSyncGuard();
         applyPreset('All', null);
       }
     });
   });
 }
 
-async function setRangeAll(t0, t1) {
-  S.syncing = true;
+function setRangeAll(t0, t1) {
   S.viewT0 = t0; S.viewT1 = t1;
-  try {
-    await Promise.all(
-      S.plotIds.map(id => Plotly.relayout(id, { 'xaxis.range': [t0, t1], 'yaxis.autorange': true }))
-    );
-  } finally {
-    S.syncing = false;
-  }
+  updateRefreshBtn();
+  setSyncGuard();
+  S.activePlotIds.forEach(id =>
+    Plotly.relayout(id, { 'xaxis.range': [t0, t1], 'yaxis.autorange': true })
+  );
 }
 
-async function syncPan(sourceId, x0, x1) {
-  S.syncing = true;
-  try {
-    await Promise.all(
-      S.plotIds.filter(id => id !== sourceId).map(id =>
-        Plotly.relayout(id, { 'xaxis.range': [x0, x1], 'yaxis.autorange': true })
-      )
-    );
-  } finally {
-    S.syncing = false;
-  }
+function syncPan(sourceId, x0, x1) {
+  // S.viewT0/T1 already set by caller before this is called
+  S.activePlotIds.filter(id => id !== sourceId).forEach(id =>
+    Plotly.relayout(id, { 'xaxis.range': [x0, x1], 'yaxis.autorange': true })
+  );
 }
 
 function applyPreset(label, dur) {
   S.dur = dur; S.durLabel = label;
   setActivePreset(label);
   if (S.highResMode) {
-    const t1 = dur === null ? S.session.t_max : Math.min(S.t0 + dur, S.session.t_max);
-    exitHighRes(S.t0, t1);
+    // Use actual current view for the transition, not potentially stale S.t0
+    exitHighRes(S.viewT0, S.viewT1);
   }
   _applyDur();
 }
