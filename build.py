@@ -7,6 +7,8 @@ import pandas as pd
 
 import pipeline_2025_26 as _p1
 import pipeline_2025_26_b as _p2
+import pipeline_2025_26_c as _p3
+
 
 SESSIONS = [
     {
@@ -34,6 +36,16 @@ SESSIONS = [
         "window": timedelta(minutes=120),
         "events": {},
         "pipeline": _p2,
+    },
+    {
+        "id": "cf_1",
+        "type": "Cold Flow",
+        "label": "4/3/2026",
+        "tz": "America/New_York",
+        "start": datetime(2026, 4, 3, 15, 20),
+        "window": timedelta(minutes=120),
+        "events": {},
+        "pipeline": _p3,
     },
 ]
 MAX_POINTS = 30_000
