@@ -25,6 +25,24 @@
       --cf-bg:    #dce8ff;
       --sf-color: #8b1a0a;
       --sf-bg:    #ffe0d8;
+      --toggle-bg: #e0d9ce;
+    }
+
+    body.dark {
+      --bg:       #1a1714;
+      --bg-card:  #242018;
+      --bg-ctrl:  #1f1c17;
+      --border:   #3a342a;
+      --border-2: #4a4238;
+      --text:     #ede8df;
+      --text-dim: #9c8f82;
+      --text-xs:  #6b6057;
+      --accent:   #5b82f0;
+      --cf-color: #7aaef5;
+      --cf-bg:    #1a2a45;
+      --sf-color: #f59080;
+      --sf-bg:    #3d1a14;
+      --toggle-bg: #2e2820;
     }
 
     body {
@@ -32,6 +50,55 @@
       font-family: 'DM Sans', system-ui, sans-serif;
       color: var(--text);
       -webkit-font-smoothing: antialiased;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* ── Theme toggle ─────────────────────────────────────────────── */
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      background: var(--toggle-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px 4px 6px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--text-dim);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+    .theme-toggle:hover { border-color: var(--border-2); color: var(--text); }
+
+    .toggle-track {
+      width: 28px; height: 16px;
+      background: var(--border);
+      border-radius: 8px;
+      position: relative;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    body.dark .toggle-track { background: var(--accent); }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 12px; height: 12px;
+      background: var(--bg-card);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+    body.dark .toggle-thumb { transform: translateX(12px); }
+
+    /* ── Landing header row ───────────────────────────────────────── */
+    #landing-header {
+      width: 100%;
+      max-width: 740px;
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 12px;
     }
 
     #loading-overlay {
@@ -44,6 +111,7 @@
       flex-direction: column;
       gap: 16px;
     }
+    body.dark #loading-overlay { background: rgba(26,23,20,0.92); }
     #loading-overlay.on { display: flex; }
     .spinner {
       width: 28px; height: 28px;
@@ -98,11 +166,11 @@
       min-width: 280px;
       max-width: 340px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.04);
-      transition: box-shadow 0.15s;
+      transition: box-shadow 0.15s, background 0.2s, border-color 0.2s;
     }
-    .card:hover {
-      box-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 8px 20px rgba(0,0,0,0.06);
-    }
+    body.dark .card { box-shadow: 0 1px 4px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2); }
+    .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 8px 20px rgba(0,0,0,0.06); }
+    body.dark .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 8px 20px rgba(0,0,0,0.3); }
 
     .badge-row {
       display: flex;
@@ -141,71 +209,41 @@
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%237a6f63' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 13px center;
-      transition: border-color 0.12s;
+      transition: border-color 0.12s, background 0.2s, color 0.2s;
     }
-    .card select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-    .card select:disabled {
-      cursor: default;
-      color: var(--text-xs);
-      background-color: #f0ebe0;
-    }
+    .card select:focus { outline: none; border-color: var(--accent); }
+    .card select:disabled { cursor: default; color: var(--text-xs); background-color: var(--bg-ctrl); }
 
-    .card-hint {
-      font-size: 12px;
-      color: var(--text-xs);
-      margin-top: 10px;
-      min-height: 16px;
-    }
+    .card-hint { font-size: 12px; color: var(--text-xs); margin-top: 10px; min-height: 16px; }
 
-    .footer-note {
-      margin-top: 48px;
-      font-size: 12px;
-      color: var(--text-xs);
-      letter-spacing: 0.2px;
-    }
+    .footer-note { margin-top: 48px; font-size: 12px; color: var(--text-xs); letter-spacing: 0.2px; }
 
-    #viewer {
-      display: none;
-      min-height: 100vh;
-      background: var(--bg);
-    }
+    #viewer { display: none; min-height: 100vh; background: var(--bg); }
 
     #viewer-header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      gap: 16px;
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 16px;
       padding: 14px 28px 13px;
       border-bottom: 1px solid var(--border);
       background: var(--bg);
+      transition: background 0.2s, border-color 0.2s;
     }
 
     #btn-back {
       padding: 6px 14px;
-      font-size: 12px;
-      font-weight: 600;
-      font-family: inherit;
-      border-radius: 6px;
-      cursor: pointer;
+      font-size: 12px; font-weight: 600; font-family: inherit;
+      border-radius: 6px; cursor: pointer;
       border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text-dim);
+      background: transparent; color: var(--text-dim);
       flex-shrink: 0;
       transition: all 0.12s;
     }
     #btn-back:hover { background: var(--bg-ctrl); border-color: var(--border-2); }
 
-    #viewer-title {
-      font-size: 17px;
-      font-weight: 600;
-      letter-spacing: -0.3px;
-    }
+    #viewer-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
     #viewer-subtitle { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+    #viewer-header-right { margin-left: auto; }
 
     #graphs { padding: 14px 22px 220px; }
 
@@ -215,120 +253,76 @@
       border: 1px solid var(--border);
       margin-bottom: 10px;
       overflow: hidden;
+      transition: background 0.2s, border-color 0.2s;
     }
 
     #controls {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
+      position: fixed; bottom: 0; left: 0; right: 0;
       background: var(--bg-ctrl);
       border-top: 1px solid var(--border);
       padding: 11px 28px 15px;
       z-index: 200;
+      transition: background 0.2s, border-color 0.2s;
     }
 
-    #preset-row {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
+    #preset-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
 
     .window-label {
-      font-size: 9.5px;
-      letter-spacing: 1.8px;
-      color: var(--text-xs);
-      font-weight: 700;
-      margin-right: 5px;
-      text-transform: uppercase;
+      font-size: 9.5px; letter-spacing: 1.8px; color: var(--text-xs);
+      font-weight: 700; margin-right: 5px; text-transform: uppercase;
     }
 
     .preset-btn {
-      padding: 4px 11px;
-      font-size: 12px;
-      font-weight: 600;
-      font-family: inherit;
-      border-radius: 5px;
-      cursor: pointer;
+      padding: 4px 11px; font-size: 12px; font-weight: 600; font-family: inherit;
+      border-radius: 5px; cursor: pointer;
       border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text-dim);
+      background: transparent; color: var(--text-dim);
       transition: all 0.12s;
     }
     .preset-btn:hover { border-color: var(--border-2); color: var(--text); }
-    .preset-btn.active {
-      border-color: var(--accent);
-      background: var(--accent);
-      color: #fff;
-    }
+    .preset-btn.active { border-color: var(--accent); background: var(--accent); color: #fff; }
 
     .custom-sep { width: 1px; height: 18px; background: var(--border); margin: 0 6px; flex-shrink: 0; }
     .custom-label { color: var(--text-dim); font-size: 12px; }
 
     #custom-input {
-      background: var(--bg-card);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 4px 8px;
-      width: 74px;
-      font-family: 'DM Mono', monospace;
-      font-size: 12.5px;
-      transition: border-color 0.12s;
+      background: var(--bg-card); color: var(--text);
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: 4px 8px; width: 74px;
+      font-family: 'DM Mono', monospace; font-size: 12.5px;
+      transition: border-color 0.12s, background 0.2s, color 0.2s;
     }
     #custom-input:focus { outline: none; border-color: var(--accent); }
 
     #btn-set {
-      padding: 4px 12px;
-      font-size: 12px;
-      font-weight: 600;
-      font-family: inherit;
-      border-radius: 5px;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text);
+      padding: 4px 12px; font-size: 12px; font-weight: 600; font-family: inherit;
+      border-radius: 5px; cursor: pointer;
+      border: 1px solid var(--border); background: transparent; color: var(--text);
       transition: all 0.12s;
     }
     #btn-set:hover { background: var(--bg-card); }
 
     #slider-row { display: none; margin-bottom: 8px; padding: 2px 0; }
-    #pos-slider {
-      width: 100%;
-      height: 4px;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
+    #pos-slider { width: 100%; height: 4px; accent-color: var(--accent); cursor: pointer; }
 
-    #status-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    #status-row { display: flex; justify-content: space-between; align-items: center; }
     #time-label, #point-count {
-      font-size: 11.5px;
-      color: var(--text-dim);
-      font-family: 'DM Mono', monospace;
+      font-size: 11.5px; color: var(--text-dim); font-family: 'DM Mono', monospace;
     }
 
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
     input[type=number] { -moz-appearance: textfield; }
 
     #marker-row {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      flex-wrap: wrap;
-      padding-top: 9px;
-      border-top: 1px solid var(--border);
-      margin-top: 5px;
+      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+      padding-top: 9px; border-top: 1px solid var(--border); margin-top: 5px;
     }
     #marker-time {
       background: var(--bg-card); color: var(--text);
       border: 1px solid var(--border); border-radius: 5px;
       padding: 4px 8px; width: 82px;
       font-family: 'DM Mono', monospace; font-size: 12.5px;
-      transition: border-color 0.12s;
+      transition: border-color 0.12s, background 0.2s;
     }
     #marker-time:focus { outline: none; border-color: var(--accent); }
     #marker-name {
@@ -336,14 +330,14 @@
       border: 1px solid var(--border); border-radius: 5px;
       padding: 4px 8px; width: 140px;
       font-family: inherit; font-size: 12.5px;
-      transition: border-color 0.12s;
+      transition: border-color 0.12s, background 0.2s;
     }
     #marker-name:focus { outline: none; border-color: var(--accent); }
     #btn-add-marker {
-      padding: 4px 12px; font-size: 12px; font-weight: 600;
-      font-family: inherit; border-radius: 5px; cursor: pointer;
-      border: 1px solid var(--border); background: transparent;
-      color: var(--text); transition: all 0.12s;
+      padding: 4px 12px; font-size: 12px; font-weight: 600; font-family: inherit;
+      border-radius: 5px; cursor: pointer;
+      border: 1px solid var(--border); background: transparent; color: var(--text);
+      transition: all 0.12s;
     }
     #btn-add-marker:hover { background: var(--bg-card); }
     .marker-chip {
@@ -352,10 +346,10 @@
       background: var(--bg-card); border: 1px solid #a8bdee;
       font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-dim);
     }
+    body.dark .marker-chip { border-color: #3a4f7a; }
     .chip-del {
-      cursor: pointer; color: var(--text-xs); font-size: 14px;
-      line-height: 1; background: none; border: none; padding: 0;
-      font-family: inherit; margin-left: 1px;
+      cursor: pointer; color: var(--text-xs); font-size: 14px; line-height: 1;
+      background: none; border: none; padding: 0; font-family: inherit; margin-left: 1px;
     }
     .chip-del:hover { color: var(--text); }
   </style>
@@ -368,6 +362,12 @@
 </div>
 
 <div id="landing">
+  <div id="landing-header">
+    <button class="theme-toggle" id="theme-toggle-landing" aria-label="Toggle dark mode">
+      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      <span id="theme-label-landing">Dark</span>
+    </button>
+  </div>
   <div class="wordmark">CSI Rockets</div>
   <h1>Testing Data</h1>
   <div class="cards">
@@ -402,6 +402,12 @@
       <div id="viewer-title"></div>
       <div id="viewer-subtitle"></div>
     </div>
+    <div id="viewer-header-right">
+      <button class="theme-toggle" id="theme-toggle-viewer" aria-label="Toggle dark mode">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span id="theme-label-viewer">Dark</span>
+      </button>
+    </div>
   </div>
   <div id="graphs"></div>
   <div id="controls">
@@ -434,8 +440,48 @@
 </div>
 
 <script>
-const DISPLAY_MAX   = 5000;  // max points per trace for normal browsing
-const MAX_HR_CHUNKS = 10;    // refuse high-res if view spans more than this many chunks
+const DISPLAY_MAX   = 5000;
+const MAX_HR_CHUNKS = 10;
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+let _dark = false;
+
+function getPlotColors() {
+  return _dark ? {
+    bgCard:  '#242018',
+    bgPlot:  '#1e1c15',
+    border:  '#3a342a',
+    grid:    '#2e2820',
+    text:    '#ede8df',
+    textDim: '#9c8f82',
+    accent:  '#5b82f0',
+  } : {
+    bgCard:  '#ffffff',
+    bgPlot:  '#fafaf8',
+    border:  '#cfc7b8',
+    grid:    '#e8e2d8',
+    text:    '#1c1814',
+    textDim: '#7a6f63',
+    accent:  '#2b5ce6',
+  };
+}
+
+function applyTheme(dark) {
+  _dark = dark;
+  document.body.classList.toggle('dark', dark);
+  const label = dark ? 'Light' : 'Dark';
+  document.getElementById('theme-label-landing').textContent = label;
+  document.getElementById('theme-label-viewer').textContent  = label;
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+
+  if (S.session && S.activePlotIds.length) {
+    reloadFromOverview(S.viewT0, S.viewT1);
+  }
+}
+
+function toggleTheme() { applyTheme(!_dark); }
+
+// ── State ─────────────────────────────────────────────────────────────────────
 
 const STATE_COLORS = {
   ereg_state_closed:  'rgba(220,50,50,0.25)',
@@ -454,16 +500,6 @@ const STATE_NAMES = {
   state_gn2_fill_only:'gn2 fill',
 };
 
-const P = {
-  bgCard:  '#ffffff',
-  bgPlot:  '#fafaf8',
-  border:  '#cfc7b8',
-  grid:    '#e8e2d8',
-  text:    '#1c1814',
-  textDim: '#7a6f63',
-  accent:  '#2b5ce6',
-};
-
 const PRESETS = [
   ['1s', 1], ['5s', 5], ['10s', 10], ['30s', 30],
   ['1m', 60], ['5m', 300], ['10m', 600], ['30m', 1800],
@@ -475,21 +511,16 @@ let S = {
   dur:           null,
   durLabel:      'All',
   t0:            0,
-  activePlots:   [],    // plot configs with at least one data column present (pre-filtered)
-  plotIds:       [],    // div IDs — 1:1 with activePlots; no empty-plot divs are ever created
-  activePlotIds: [],    // subset of plotIds actually rendered (equal to plotIds in normal use)
-  viewT0:        0,     // current x-axis range start (kept in sync for other consumers)
-  viewT1:        0,     // current x-axis range end
+  activePlots:   [],
+  plotIds:       [],
+  activePlotIds: [],
+  viewT0:        0,
+  viewT1:        0,
   highResMode:   false,
   chunkCache:    new Map(),
-  userEvents:    [],    // [{t, label}] — locally-added vertical markers
+  userEvents:    [],
 };
 
-// ── Sync guard ────────────────────────────────────────────────────────────────
-// Set before ANY programmatic Plotly call that will fire relayout events.
-// Cleared after a short delay so all async echoes are suppressed.
-// This replaces the fragile float-equality echo check (Plotly may return
-// slightly different values than what was set, causing cascading syncs).
 let _syncGuard = false;
 let _syncGuardTimer = null;
 function setSyncGuard() {
@@ -506,7 +537,6 @@ function lowerBound(arr, val) {
   return lo;
 }
 
-// Slice col from data object in [t0, t1], downsampled to at most maxPts (null = no limit)
 function buildTraceData(col, t0, t1, maxPts, data) {
   const ts   = data.t_sec;
   const vals = data[col];
@@ -548,28 +578,60 @@ function buildPlotTraces(plot, t0, t1, maxPts, data) {
   return traces;
 }
 
+function buildBaseLayout() {
+  const P = getPlotColors();
+  return {
+    paper_bgcolor: P.bgCard,
+    plot_bgcolor:  P.bgPlot,
+    font:   { color: P.text, family: "'DM Sans', system-ui, sans-serif", size: 11 },
+    hovermode: 'x unified',
+    height: 260,
+    margin: { l: 64, r: 24, t: 44, b: 44 },
+    xaxis: {
+      gridcolor: P.grid, gridwidth: 1, zerolinecolor: P.border,
+      tickformat: '.1f',
+      title:    { text: 'Time (s)', font: { color: P.textDim, size: 11 } },
+      tickfont: { color: P.textDim },
+    },
+    yaxis: {
+      gridcolor: P.grid, gridwidth: 1, zerolinecolor: P.border,
+      title:    { font: { color: P.textDim, size: 11 } },
+      tickfont: { color: P.textDim },
+    },
+    legend: {
+      orientation: 'h', yanchor: 'bottom', y: 1.01, xanchor: 'left', x: 0,
+      bgcolor: 'rgba(0,0,0,0)', font: { size: 10 },
+    },
+    hoverlabel: {
+      bgcolor: _dark ? '#2a2520' : '#fff8f0',
+      bordercolor: P.border,
+      font: { color: P.text, size: 12 },
+    },
+  };
+}
+
 function buildPlotLayout(plot, t0, t1, shapes, annotations) {
-  const cols      = Array.isArray(plot.columns) ? plot.columns : [plot.columns];
+  const P       = getPlotColors();
+  const cols    = Array.isArray(plot.columns) ? plot.columns : [plot.columns];
   const stateCols = plot.state_columns || [];
-  const isRelay   = cols.some(c => c.includes('FsState') || c.includes('ereg_'));
-  const layout    = {
-    ...BASE_LAYOUT,
+  const isRelay = cols.some(c => c.includes('FsState') || c.includes('ereg_'));
+  const layout  = {
+    ...buildBaseLayout(),
     title: { text: plot.title, font: { size: 12, color: P.text }, x: 0, xanchor: 'left' },
-    xaxis: { ...BASE_LAYOUT.xaxis, range: [t0, t1] },
+    xaxis: { ...buildBaseLayout().xaxis, range: [t0, t1] },
     shapes, annotations,
   };
   if (stateCols.length > 0) {
     layout.yaxis2 = { overlaying: 'y', side: 'right', range: [0, 1], showticklabels: false, showgrid: false, zeroline: false };
   }
   if (isRelay) {
-    layout.legend = { orientation: 'v', yanchor: 'top', y: 0.98, xanchor: 'right', x: 0.99, bgcolor: 'rgba(255,255,255,0.88)', bordercolor: P.border, borderwidth: 1, font: { size: 10 } };
+    layout.legend = { orientation: 'v', yanchor: 'top', y: 0.98, xanchor: 'right', x: 0.99, bgcolor: _dark ? 'rgba(36,32,24,0.9)' : 'rgba(255,255,255,0.88)', bordercolor: P.border, borderwidth: 1, font: { size: 10 } };
   }
   return layout;
 }
 
 // ── Plotly helpers ────────────────────────────────────────────────────────────
 
-// Reload all plots from overview data.
 function reloadFromOverview(viewT0, viewT1) {
   const { shapes, annotations } = buildEventAnnotations();
   setSyncGuard();
@@ -581,8 +643,6 @@ function reloadFromOverview(viewT0, viewT1) {
   });
 }
 
-// Reload all plots from merged chunk data (high-res).
-// Returns a Promise so callers can await completion.
 function reloadFromChunks(mergedData, viewT0, viewT1) {
   const { shapes, annotations } = buildEventAnnotations();
   setSyncGuard();
@@ -594,9 +654,6 @@ function reloadFromChunks(mergedData, viewT0, viewT1) {
   }));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Concatenate chunk objects, keeping only rows within [t0, t1]
 function mergeChunks(chunks, t0, t1) {
   const out = { t_sec: [] };
   for (const chunk of chunks) {
@@ -626,13 +683,13 @@ async function fetchChunk(sessionId, ci) {
 function updateRefreshBtn() {
   const btn = document.getElementById('btn-refresh-res');
   if (!S.session) return;
-  const cs        = S.session.chunk_seconds;
-  const lo        = Math.max(0, Math.floor(S.viewT0 / cs));
-  const hi        = Math.min(Math.floor(S.viewT1 / cs), S.session.n_chunks - 1);
-  const nChunks   = hi - lo + 1;
-  const tooBig    = nChunks > MAX_HR_CHUNKS;
-  btn.disabled    = tooBig || S.highResMode;
-  btn.title       = tooBig
+  const cs      = S.session.chunk_seconds;
+  const lo      = Math.max(0, Math.floor(S.viewT0 / cs));
+  const hi      = Math.min(Math.floor(S.viewT1 / cs), S.session.n_chunks - 1);
+  const nChunks = hi - lo + 1;
+  const tooBig  = nChunks > MAX_HR_CHUNKS;
+  btn.disabled  = tooBig || S.highResMode;
+  btn.title     = tooBig
     ? `Zoom in to under ${MAX_HR_CHUNKS * cs / 60} min to enable high-res`
     : S.highResMode ? 'Already in high-res mode' : '';
   if (!S.highResMode) {
@@ -646,11 +703,8 @@ async function refreshResolution() {
   const cs = S.session.chunk_seconds;
   const lo = Math.max(0, Math.floor(t0 / cs));
   const hi = Math.min(Math.floor(t1 / cs), S.session.n_chunks - 1);
-
   const btn = document.getElementById('btn-refresh-res');
-  btn.textContent = 'Loading…';
-  btn.disabled = true;
-
+  btn.textContent = 'Loading…'; btn.disabled = true;
   try {
     const chunks = await Promise.all(
       Array.from({ length: hi - lo + 1 }, (_, k) => fetchChunk(S.session.id, lo + k))
@@ -679,15 +733,21 @@ function exitHighRes(newT0, newT1) {
   reloadFromOverview(newT0, newT1);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────────
 
 async function init() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark') applyTheme(true);
+
+  document.getElementById('theme-toggle-landing').addEventListener('click', toggleTheme);
+  document.getElementById('theme-toggle-viewer').addEventListener('click', toggleTheme);
+
   buildPresetButtons();
   wireControls();
   try {
     const res = await fetch('data/sessions.json');
     const manifest = await res.json();
-    populateDd('dd-cf', 'cf-count', 'cf-hint', manifest.cold_flow  || []);
+    populateDd('dd-cf', 'cf-count', 'cf-hint', manifest.cold_flow   || []);
     populateDd('dd-sf', 'sf-count', 'sf-hint', manifest.static_fire || []);
   } catch(e) {
     console.warn('Could not load sessions.json. Run build.py first.', e);
@@ -729,16 +789,10 @@ function wireControls() {
   document.getElementById('btn-back').addEventListener('click', goBack);
   document.getElementById('btn-set').addEventListener('click', applyCustom);
   document.getElementById('btn-refresh-res').addEventListener('click', refreshResolution);
-  document.getElementById('custom-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') applyCustom();
-  });
+  document.getElementById('custom-input').addEventListener('keydown', e => { if (e.key === 'Enter') applyCustom(); });
   document.getElementById('btn-add-marker').addEventListener('click', addMarker);
-  document.getElementById('marker-name').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addMarker();
-  });
-  document.getElementById('marker-time').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('marker-name').focus();
-  });
+  document.getElementById('marker-name').addEventListener('keydown', e => { if (e.key === 'Enter') addMarker(); });
+  document.getElementById('marker-time').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('marker-name').focus(); });
   document.getElementById('pos-slider').addEventListener('input', e => {
     if (S.dur === null) return;
     S.t0 = parseFloat(e.target.value);
@@ -767,27 +821,19 @@ async function loadSession(id) {
 function showViewer() {
   document.getElementById('landing').style.display = 'none';
   document.getElementById('viewer').style.display  = 'block';
-
-  document.getElementById('viewer-title').textContent =
-    `${S.session.type} — ${S.session.label}`;
-  document.getElementById('viewer-subtitle').textContent =
-    `${S.session.t_max.toFixed(1)} s total`;
+  document.getElementById('viewer-title').textContent   = `${S.session.type} — ${S.session.label}`;
+  document.getElementById('viewer-subtitle').textContent = `${S.session.t_max.toFixed(1)} s total`;
 
   const graphsDiv = document.getElementById('graphs');
   S.plotIds.forEach(id => { const el = document.getElementById(id); if (el) Plotly.purge(el); });
   graphsDiv.innerHTML = '';
-  S.plotIds    = [];
-  S.activePlots = [];
+  S.plotIds = []; S.activePlots = [];
 
   S.session.plots.forEach((plot, i) => {
-    // Skip plots with no main data columns in this session — no div created.
-    // Only check plot.columns, not state_columns (state_run etc. exist in every session).
     const mainCols = Array.isArray(plot.columns) ? plot.columns : [plot.columns];
     if (!mainCols.some(c => S.session.data[c] !== undefined)) return;
-
     const id   = `plot-${i}`;
-    S.plotIds.push(id);
-    S.activePlots.push(plot);
+    S.plotIds.push(id); S.activePlots.push(plot);
     const card  = document.createElement('div');
     card.className = 'graph-card';
     const inner = document.createElement('div');
@@ -820,48 +866,24 @@ function goBack() {
   document.getElementById('marker-chips').innerHTML = '';
 }
 
-const BASE_LAYOUT = {
-  paper_bgcolor: P.bgCard,
-  plot_bgcolor:  P.bgPlot,
-  font:   { color: P.text, family: "'DM Sans', system-ui, sans-serif", size: 11 },
-  hovermode: 'x unified',
-  height: 260,
-  margin: { l: 64, r: 24, t: 44, b: 44 },
-  xaxis: {
-    gridcolor: P.grid, gridwidth: 1, zerolinecolor: P.border,
-    tickformat: '.1f',
-    title:    { text: 'Time (s)', font: { color: P.textDim, size: 11 } },
-    tickfont: { color: P.textDim },
-  },
-  yaxis: {
-    gridcolor: P.grid, gridwidth: 1, zerolinecolor: P.border,
-    title:    { font: { color: P.textDim, size: 11 } },
-    tickfont: { color: P.textDim },
-  },
-  legend: {
-    orientation: 'h', yanchor: 'bottom', y: 1.01, xanchor: 'left', x: 0,
-    bgcolor: 'rgba(0,0,0,0)', font: { size: 10 },
-  },
-  hoverlabel: { bgcolor: '#fff8f0', bordercolor: P.border, font: { color: P.text, size: 12 } },
-};
-
 function buildEventAnnotations() {
+  const P = getPlotColors();
   const shapes = [], annotations = [];
-  // Merge session events and user-added markers, sorted by time
   const sessionEvts = Object.entries(S.session.events || {}).map(([t, label]) => ({ t: +t, label, user: false }));
   const userEvts    = (S.userEvents || []).map(e => ({ ...e, user: true }));
   const allEvts     = [...sessionEvts, ...userEvts].sort((a, b) => a.t - b.t);
   allEvts.forEach(({ t, label, user }, idx) => {
     shapes.push({
       type: 'line', x0: t, x1: t, y0: 0, y1: 1, yref: 'paper',
-      line: { color: user ? 'rgba(43,92,230,0.45)' : 'rgba(40,40,40,0.28)', width: 1, dash: 'dash' },
+      line: { color: user ? 'rgba(91,130,240,0.5)' : (_dark ? 'rgba(200,190,180,0.35)' : 'rgba(40,40,40,0.28)'), width: 1, dash: 'dash' },
     });
     annotations.push({
       x: t, xanchor: 'left',
       y: idx % 2 === 0 ? 0.97 : 0.12, yref: 'paper',
       text: label, showarrow: false,
       font: { size: 9, color: user ? P.accent : P.textDim },
-      bgcolor: 'rgba(245,240,232,0.88)', borderpad: 2,
+      bgcolor: _dark ? 'rgba(36,32,24,0.88)' : 'rgba(245,240,232,0.88)',
+      borderpad: 2,
     });
   });
   return { shapes, annotations };
@@ -870,16 +892,12 @@ function buildEventAnnotations() {
 function renderAllPlots() {
   const { shapes, annotations } = buildEventAnnotations();
   S.highResMode = false;
-  S.viewT0 = 0;
-  S.viewT1 = S.session.t_max;
+  S.viewT0 = 0; S.viewT1 = S.session.t_max;
   S.chunkCache = new Map();
   S.activePlotIds = [];
   const btn = document.getElementById('btn-refresh-res');
-  btn.classList.remove('active');
-  btn.textContent = '↑ Refresh Res';
-  btn.disabled = false;
+  btn.classList.remove('active'); btn.textContent = '↑ Refresh Res'; btn.disabled = false;
 
-  // activePlots/plotIds are already pre-filtered to plots with data (done in showViewer)
   S.activePlots.forEach((plot, i) => {
     const divId  = S.plotIds[i];
     const traces = buildPlotTraces(plot, 0, S.session.t_max, DISPLAY_MAX, S.session.data);
@@ -894,23 +912,16 @@ function renderAllPlots() {
     });
 
     document.getElementById(divId).on('plotly_relayout', ed => {
-      if (_syncGuard) return;  // echo from a programmatic Plotly call — ignore
+      if (_syncGuard) return;
       if (ed['xaxis.range[0]'] !== undefined) {
         const x0 = +ed['xaxis.range[0]'];
         const x1 = +ed['xaxis.range[1]'];
         S.viewT0 = x0; S.viewT1 = x1;
-        setSyncGuard();  // guard before any outgoing sync calls
-        if (S.highResMode) {
-          exitHighRes(x0, x1);
-        } else {
-          syncPan(divId, x0, x1);
-        }
-        updateRefreshBtn();
-        updateStatus(x0, x1);
-        if (S.dur !== null) {
-          S.t0 = Math.max(0, x0);
-          document.getElementById('pos-slider').value = S.t0;
-        }
+        setSyncGuard();
+        if (S.highResMode) exitHighRes(x0, x1);
+        else syncPan(divId, x0, x1);
+        updateRefreshBtn(); updateStatus(x0, x1);
+        if (S.dur !== null) { S.t0 = Math.max(0, x0); document.getElementById('pos-slider').value = S.t0; }
       } else if (ed['xaxis.autorange'] === true) {
         setSyncGuard();
         applyPreset('All', null);
@@ -921,28 +932,20 @@ function renderAllPlots() {
 
 function setRangeAll(t0, t1) {
   S.viewT0 = t0; S.viewT1 = t1;
-  updateRefreshBtn();
-  setSyncGuard();
-  S.activePlotIds.forEach(id =>
-    Plotly.relayout(id, { 'xaxis.range': [t0, t1], 'yaxis.autorange': true })
-  );
+  updateRefreshBtn(); setSyncGuard();
+  S.activePlotIds.forEach(id => Plotly.relayout(id, { 'xaxis.range': [t0, t1], 'yaxis.autorange': true }));
 }
 
 function syncPan(sourceId, x0, x1) {
-  // S.viewT0/T1 already set by caller before this is called
   S.activePlotIds.filter(id => id !== sourceId).forEach(id =>
     Plotly.relayout(id, { 'xaxis.range': [x0, x1], 'yaxis.autorange': true })
   );
 }
 
-// ── User markers ──────────────────────────────────────────────────────────────
-
 function updateEventOverlays() {
   const { shapes, annotations } = buildEventAnnotations();
   setSyncGuard();
-  S.activePlotIds.forEach(id =>
-    Plotly.relayout(id, { shapes, annotations })
-  );
+  S.activePlotIds.forEach(id => Plotly.relayout(id, { shapes, annotations }));
 }
 
 function renderMarkerChips() {
@@ -953,9 +956,7 @@ function renderMarkerChips() {
     chip.className = 'marker-chip';
     chip.textContent = `${t.toFixed(2)} s — ${label}`;
     const del = document.createElement('button');
-    del.className = 'chip-del';
-    del.textContent = '×';
-    del.title = 'Remove marker';
+    del.className = 'chip-del'; del.textContent = '×'; del.title = 'Remove marker';
     del.addEventListener('click', () => deleteMarker(t, label));
     chip.appendChild(del);
     container.appendChild(chip);
@@ -963,8 +964,8 @@ function renderMarkerChips() {
 }
 
 function addMarker() {
-  const tVal   = parseFloat(document.getElementById('marker-time').value);
-  const label  = document.getElementById('marker-name').value.trim();
+  const tVal  = parseFloat(document.getElementById('marker-time').value);
+  const label = document.getElementById('marker-name').value.trim();
   if (isNaN(tVal) || !label) return;
   S.userEvents.push({ t: tVal, label });
   document.getElementById('marker-time').value = '';
@@ -979,15 +980,10 @@ function deleteMarker(t, label) {
   if (S.activePlotIds.length) updateEventOverlays();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 function applyPreset(label, dur) {
   S.dur = dur; S.durLabel = label;
   setActivePreset(label);
-  if (S.highResMode) {
-    // Use actual current view for the transition, not potentially stale S.t0
-    exitHighRes(S.viewT0, S.viewT1);
-  }
+  if (S.highResMode) exitHighRes(S.viewT0, S.viewT1);
   _applyDur();
 }
 
@@ -1010,13 +1006,10 @@ function _applyDur() {
   const sliderMax = Math.max(0, S.session.t_max - S.dur);
   S.t0 = Math.min(S.t0, sliderMax);
   const slider = document.getElementById('pos-slider');
-  slider.max   = sliderMax;
-  slider.step  = Math.max(0.01, sliderMax / 2000);
-  slider.value = S.t0;
+  slider.max = sliderMax; slider.step = Math.max(0.01, sliderMax / 2000); slider.value = S.t0;
   document.getElementById('slider-row').style.display = 'block';
   const t1 = Math.min(S.t0 + S.dur, S.session.t_max);
-  setRangeAll(S.t0, t1);
-  updateStatus(S.t0, t1);
+  setRangeAll(S.t0, t1); updateStatus(S.t0, t1);
 }
 
 function setActivePreset(active) {
@@ -1031,25 +1024,19 @@ function updateStatus(t0, t1, highResCount) {
   document.getElementById('time-label').textContent = S.dur === null
     ? `t = 0 s → ${S.session.t_max.toFixed(1)} s  (full run)${hiTag}`
     : `t = ${t0.toFixed(2)} s → ${t1.toFixed(2)} s  (${S.durLabel} window)${hiTag}`;
-
   const ts = S.session.data.t_sec;
   const lo = lowerBound(ts, t0);
   const hi = lowerBound(ts, t1 + 1e-9);
   const overviewPts = hi - lo;
-
   if (S.highResMode && highResCount !== undefined) {
-    document.getElementById('point-count').textContent =
-      `${highResCount.toLocaleString()} pts (full res)`;
+    document.getElementById('point-count').textContent = `${highResCount.toLocaleString()} pts (full res)`;
   } else {
     const shown = Math.min(overviewPts, DISPLAY_MAX);
-    document.getElementById('point-count').textContent =
-      `${shown.toLocaleString()} / ${overviewPts.toLocaleString()} overview pts`;
+    document.getElementById('point-count').textContent = `${shown.toLocaleString()} / ${overviewPts.toLocaleString()} overview pts`;
   }
 }
 
-function setLoading(v) {
-  document.getElementById('loading-overlay').classList.toggle('on', v);
-}
+function setLoading(v) { document.getElementById('loading-overlay').classList.toggle('on', v); }
 
 init();
 </script>
