@@ -2,27 +2,25 @@ import hashlib
 import io
 import os
 import urllib.request
-from pathlib import Path
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import cast
+from typing import Literal, cast
 
+import matplotlib.pyplot as plt
 import pandas as pd
-import plotly.graph_objects as go
-from IPython.display import display
-from ipywidgets import HTML, FloatRangeSlider, Layout, VBox
+import plotly.express as px
+from ipywidgets import FloatSlider, Layout, interactive
 
 BASE_URL = "https://csi-fs-pi-data-server.ngrok.io"
-CACHE_DIR = Path(__file__).parent / "cache"
+CACHE_DIR = "cache"
 
 FETCH_BATCH_MINUTES = 20
 
-# set this to be larger than the frequencies of the individual dataframes,
-# but not so large as to conserve compute
+# set this to be larger than the frequencies of the individuals dataframes,
+# but not to large to conserve compute
 OUTPUT_HZ = 1000
 
-# Max points rendered per trace at any zoom level
-PLOT_SAMPLE_COUNT = 5000
+PLOT_SAMPLE_COUNT = 1000
 
 
 def fetch_devices(start: datetime, window: timedelta, *devices: str) -> pd.DataFrame:
@@ -42,18 +40,6 @@ def fetch_devices(start: datetime, window: timedelta, *devices: str) -> pd.DataF
     return merged
 
 
-_STATE_RGBA: dict[str, str] = {
-    "ereg_state_closed": "rgba(220,50,50,0.25)",
-    "ereg_state_stage1": "rgba(255,165,0,0.25)",
-    "ereg_state_stage2": "rgba(50,190,50,0.25)",
-}
-_STATE_NAMES: dict[str, str] = {
-    "ereg_state_closed": "closed",
-    "ereg_state_stage1": "stage 1",
-    "ereg_state_stage2": "stage 2",
-}
-
-
 @dataclass
 class Plot:
     title: str
@@ -61,200 +47,46 @@ class Plot:
     state_columns: list[str] = field(default_factory=list)
 
 
-def _ts_sec_to_dt(ts_sec: float) -> pd.Timestamp:
-    """Convert a seconds-since-epoch float to an ET-aware Timestamp."""
-    return pd.to_datetime(ts_sec * 1e6, unit="us", utc=True).tz_convert(
-        "America/New_York"
-    )
-
-
-def _window_sample(df: pd.DataFrame, ts_min_sec: float, ts_max_sec: float) -> pd.DataFrame:
-    """
-    Filter df to the given time window (in seconds) and uniformly downsample
-    to at most PLOT_SAMPLE_COUNT rows.  Narrower windows → fewer rows to skip
-    → higher effective resolution automatically.
-    """
-    ts_min_us = ts_min_sec * 1e6
-    ts_max_us = ts_max_sec * 1e6
-    window = df[(df["ts"] >= ts_min_us) & (df["ts"] <= ts_max_us)]
-    if len(window) > PLOT_SAMPLE_COUNT:
-        step = max(1, len(window) // PLOT_SAMPLE_COUNT)
-        window = window.iloc[::step]
-    return window
-
-
-def plot_interactive(df: pd.DataFrame, *plots: Plot) -> None:
-    # Convert microsecond timestamps to timezone-aware datetimes once
-    df = df.copy()
-    df["datetime"] = pd.to_datetime(df["ts"], unit="us", utc=True).dt.tz_convert(
-        "America/New_York"
-    )
-
-    ts_min_sec = float(df["ts"].min() / 1e6)
-    ts_max_sec = float(df["ts"].max() / 1e6)
-
-    # Build (FigureWidget, main_cols, state_cols) tuples, skipping plots with no valid data
-    fig_col_pairs: list[tuple[go.FigureWidget, list[str], list[str]]] = []
-
-    init_df = _window_sample(df, ts_min_sec, ts_max_sec)
-
-    for plot in plots:
-        columns = plot.columns if isinstance(plot.columns, list) else [plot.columns]
-        columns = [
-            col
-            for col in columns
-            if col in df.columns and pd.api.types.is_numeric_dtype(df[col])
-        ]
-        state_cols = [c for c in plot.state_columns if c in df.columns]
-        if not columns and not state_cols:
-            continue
-
-        is_relay = any("FsState" in col for col in columns)
-        line_shape = "hv" if is_relay else "linear"
-
-        fig = go.FigureWidget()
-
-        for col in columns:
-            col_data = init_df[["datetime", col]].dropna(subset=[col])
-            short_name = col.split(".")[-1]
-            fig.add_trace(
-                go.Scatter(
-                    x=col_data["datetime"].values,
-                    y=col_data[col].values,
-                    mode="lines",
-                    name=short_name,
-                    line=dict(shape=line_shape, width=1.5),
-                    hovertemplate=(
-                        "<b>%{x|%H:%M:%S.%L}</b><br>"
-                        + short_name
-                        + ": <b>%{y:.4f}</b><extra></extra>"
-                    ),
-                )
-            )
-
-        for col in state_cols:
-            col_data = init_df[["datetime", col]].dropna(subset=[col])
-            fig.add_trace(
-                go.Scatter(
-                    x=col_data["datetime"].values,
-                    y=col_data[col].values,
-                    mode="lines",
-                    name=_STATE_NAMES.get(col, col),
-                    line=dict(shape="hv", width=0),
-                    fill="tozeroy",
-                    fillcolor=_STATE_RGBA.get(col, "rgba(100,100,100,0.2)"),
-                    yaxis="y2",
-                    hoverinfo="skip",
-                    showlegend=True,
-                )
-            )
-
-        # Relay plot: vertical legend on right so 8 labels don't crowd the title
-        if is_relay:
-            legend_cfg = dict(
-                orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.01
-            )
-            right_margin = 160
-        elif state_cols:
-            legend_cfg = dict(
-                orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0
-            )
-            right_margin = 30
-        else:
-            legend_cfg = dict(
-                orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0
-            )
-            right_margin = 30
-
-        layout_extra = {}
-        if state_cols:
-            layout_extra["yaxis2"] = dict(
-                overlaying="y",
-                side="right",
-                range=[0, 1],
-                showticklabels=False,
-                showgrid=False,
-                zeroline=False,
-            )
-
-        fig.update_layout(
-            title=dict(text=plot.title, font=dict(size=13)),
-            height=300,
-            autosize=True,
-            hovermode="x unified",
-            xaxis=dict(
-                title="Time (ET)",
-                type="date",
-                tickformat="%H:%M:%S",
-                # no per-plot rangeslider — we use the global slider instead
-                rangeslider=dict(visible=False),
-            ),
-            yaxis=dict(title="Value"),
-            legend=legend_cfg,
-            margin=dict(l=60, r=right_margin, t=50, b=40),
-            template="plotly_white",
-            **layout_extra,
+def plot_interactive(df: pd.DataFrame, *plots: Plot):
+    def ts_slider(value: Literal["min", "max"]):
+        min = df["ts"].min() / 1e6
+        max = df["ts"].max() / 1e6
+        return FloatSlider(
+            min if value == "min" else max,
+            min=min,
+            max=max,
+            step=1,
+            continuous_update=False,
+            layout=Layout(width="100%"),
         )
 
-        fig_col_pairs.append((fig, columns, state_cols))
+    def plot_fn(ts_min_sec: float, ts_max_sec: float):
+        print("Min ts (sec):", ts_min_sec)
+        print("Max ts (sec):", ts_max_sec)
 
-    figures = [f for f, _, _ in fig_col_pairs]
+        ts_min = ts_min_sec * 1e6
+        ts_max = ts_max_sec * 1e6
 
-    # ── Global time-range slider ───────────────────────────────────────────────
-    # continuous_update=False: re-render fires only on mouse-release, not every
-    # drag tick (updating 9 figures × N traces per tick would lag badly)
-    slider = FloatRangeSlider(
-        value=[ts_min_sec, ts_max_sec],
-        min=ts_min_sec,
-        max=ts_max_sec,
-        step=1.0,
-        description="Time range:",
-        continuous_update=False,
-        readout=False,
-        layout=Layout(width="99%"),
-        style={"description_width": "90px"},
+        for plot in plots:
+            columns = plot.columns if isinstance(plot.columns, list) else [plot.columns]
+            columns = [col for col in columns if col in df.columns and pd.api.types.is_numeric_dtype(df[col])]
+            if not columns:
+                continue
+
+            plot_df = df[(df["ts"] >= ts_min) & (df["ts"] <= ts_max)]
+            # Sample at most 1,000 rows for plotting
+            if len(plot_df) > PLOT_SAMPLE_COUNT:
+                plot_df = plot_df.sample(n=PLOT_SAMPLE_COUNT).sort_values("ts")
+            plot_df.plot(  # type: ignore
+                "ts", columns, title=plot.title, figsize=(15, 3), style="."
+            )
+            plt.show()
+
+    return interactive(
+        plot_fn,
+        ts_min_sec=ts_slider("min"),
+        ts_max_sec=ts_slider("max"),
     )
-
-    dt_fmt = "%H:%M:%S"
-
-    def _label_html(lo: float, hi: float) -> str:
-        return (
-            f"<span style='font-family:monospace;font-size:12px'>"
-            f"{_ts_sec_to_dt(lo).strftime(dt_fmt)}"
-            f" &nbsp;→&nbsp; "
-            f"{_ts_sec_to_dt(hi).strftime(dt_fmt)}"
-            f"</span>"
-        )
-
-    label = HTML(value=_label_html(ts_min_sec, ts_max_sec))
-
-    def on_slider_change(change: dict) -> None:
-        lo, hi = change["new"]
-        dt_lo = _ts_sec_to_dt(lo)
-        dt_hi = _ts_sec_to_dt(hi)
-
-        label.value = _label_html(lo, hi)
-
-        # Re-sample the full df for this window — narrower window = higher
-        # effective resolution (more of the 5000 points cover less time)
-        window_df = _window_sample(df, lo, hi)
-
-        for fig, columns, state_cols in fig_col_pairs:
-            with fig.batch_update():
-                for j, col in enumerate(columns):
-                    col_data = window_df[["datetime", col]].dropna(subset=[col])
-                    fig.data[j].x = col_data["datetime"].values
-                    fig.data[j].y = col_data[col].values
-                offset = len(columns)
-                for k, col in enumerate(state_cols):
-                    col_data = window_df[["datetime", col]].dropna(subset=[col])
-                    fig.data[offset + k].x = col_data["datetime"].values
-                    fig.data[offset + k].y = col_data[col].values
-                fig.layout.xaxis.range = [dt_lo.isoformat(), dt_hi.isoformat()]
-
-    slider.observe(on_slider_change, names="value")
-
-    display(VBox([slider, label, *figures], layout=Layout(width="100%")))
 
 
 def get_csv_with_cache(url: str) -> pd.DataFrame:
