@@ -10,6 +10,7 @@ from utils import OUTPUT_HZ
 import pipeline_2025_26 as _p1
 import pipeline_2025_26_b as _p2
 import pipeline_2025_26_c as _p3
+import pipeline_2025_26_d as _p4
 
 
 SESSIONS = [
@@ -48,6 +49,17 @@ SESSIONS = [
         "window": timedelta(minutes=120),
         "events": {},
         "pipeline": _p3,
+    },
+
+        {
+        "id": "cf_3",
+        "type": "Cold Flow",
+        "label": "4/10/2026",
+        "tz": "America/New_York",
+        "start": datetime(2026, 4, 10, 12, 20),
+        "window": timedelta(minutes=200),
+        "events": {},
+        "pipeline": _p4,
     },
 ]
 MAX_POINTS    = 30_000   # overview downsample — fast initial load
