@@ -9,6 +9,7 @@ DEVICES = [
     "FsState",
     "FsLoxGn2Transducers",
     "FsInjectorTransducers",
+    "FsThermocouples",
     "CapFill",
     "LoadCell1",
     "LoadCell2",
@@ -78,11 +79,27 @@ PLOTS = [
         state_columns=_RUN,
     ),
     Plot(
-        "[LoadCells] Individual Load Cell",
-        ["LoadCell1.data", "LoadCell2.data"],
+        "[LoadCells] Load Cell 1",
+        ["LoadCell1.data"],
         state_columns=_RUN_LOX,
     ),
+    Plot(
+        "[LoadCells] Load Cell 2",
+        ["LoadCell2.data"],
+        state_columns=_RUN_LOX,
+    ),
+    
     Plot("[LoadCells] Load Cell Sum", "thrust", state_columns=_RUN_LOX),
+    Plot(
+        "[FsThermocouples] Temperatures",
+        [
+            "FsThermocouples.lox_upper_celsius",
+            "FsThermocouples.lox_lower_celsius",
+            "FsThermocouples.gn2_internal_celsius",
+            "FsThermocouples.gn2_external_celsius",
+        ],
+        state_columns=_RUN,
+    ),
 ]
 
 def fetch_data(tz: str, start: datetime, window: timedelta) -> pd.DataFrame:
