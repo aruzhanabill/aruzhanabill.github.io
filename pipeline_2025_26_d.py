@@ -67,11 +67,18 @@ PLOTS = [
         ["FsInjectorTransducers.upper_cc"],
         state_columns=_RUN,
     ),
+    
     Plot(
-        "[CapFill] Capacitive Fill Sensor",
-        ["CapFill.cap_fill_base", "CapFill.cap_fill_actual"],
-        state_columns=_RUN,
+    "[CapFill] Capacitive Fill Sensor",
+    [
+        "CapFill.cap_fill_base",
+        "CapFill.cap_fill_actual",
+        "CapFill.cap_fill_base_rate",   
+        "CapFill.cap_fill_actual_rate",  
+    ],
+    state_columns=_RUN_LOX,
     ),
+
 
     Plot(
         "[CapFill] Board Temperature",
@@ -88,7 +95,7 @@ PLOTS = [
         ["LoadCell2.data"],
         state_columns=_RUN_LOX,
     ),
-    
+
     Plot("[LoadCells] Load Cell Sum", "thrust", state_columns=_RUN_LOX),
     Plot(
         "[FsThermocouples] Temperatures",
@@ -101,6 +108,9 @@ PLOTS = [
         state_columns=_RUN,
     ),
 ]
+
+
+
 
 def fetch_data(tz: str, start: datetime, window: timedelta) -> pd.DataFrame:
     df = fetch_devices(timezone(tz).localize(start), window, *DEVICES)
@@ -117,6 +127,32 @@ def clean_up(df: pd.DataFrame) -> pd.DataFrame:
     df["LoadCell2.data"] = -df["LoadCell2.data"]
     df["thrust"] = df["LoadCell1.data"] + df["LoadCell2.data"]
     df["thrust"] = df["thrust"].rolling(window=10).median()
+
+    for col in ["CapFill.cap_fill_base", "CapFill.cap_fill_actual"]:
+        if col in df.columns:
+            rate_col = col + "_rate"
+            window_us = 5 * 1e6  # 5 seconds in ms
+
+            ts_series = df["ts"]
+            ts_future = ts_series + window_us
+            ts_past   = ts_series - window_us
+
+            combined = (
+                df[["ts", col]]
+                .set_index("ts")[col]
+                .reindex(
+                    pd.Index(ts_series)
+                    .union(pd.Index(ts_future))
+                    .union(pd.Index(ts_past))
+                )
+                .sort_index()
+                .interpolate(method="index")
+            )
+
+            future_vals = combined.reindex(ts_future.values).values
+            past_vals   = combined.reindex(ts_past.values).values
+
+            df[rate_col] = (future_vals - past_vals) / 10.0
 
     # preserve raw booleans before stacking (used for background highlights)
     for raw_col, new_col in [
