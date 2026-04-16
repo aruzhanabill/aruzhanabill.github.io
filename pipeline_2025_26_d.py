@@ -131,9 +131,9 @@ def clean_up(df: pd.DataFrame) -> pd.DataFrame:
     for col in ["CapFill.cap_fill_base", "CapFill.cap_fill_actual"]:
         if col in df.columns:
             rate_col = col + "_rate"
-            window_us = 5 * 1e6  # 5 seconds in ms
+            window_us = 5_000_000  
 
-            ts_series = df["ts"]
+            ts_series = df["ts"].astype("int64")
             ts_future = ts_series + window_us
             ts_past   = ts_series - window_us
 
@@ -154,7 +154,6 @@ def clean_up(df: pd.DataFrame) -> pd.DataFrame:
 
             df[rate_col] = (future_vals - past_vals) / 10.0
 
-    # preserve raw booleans before stacking (used for background highlights)
     for raw_col, new_col in [
         ("FsLoxGn2Transducers.ereg_closed",  "ereg_state_closed"),
         ("FsLoxGn2Transducers.ereg_stage_1", "ereg_state_stage1"),
@@ -187,5 +186,7 @@ def clean_up(df: pd.DataFrame) -> pd.DataFrame:
     ):
         if col in df.columns:
             df[col] = 2 * i + df[col].fillna(False).astype(int)
+    
+    print(df[["CapFill.cap_fill_base_rate", "CapFill.cap_fill_actual_rate"]].describe())
 
     return df
