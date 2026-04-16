@@ -131,7 +131,7 @@ def clean_up(df: pd.DataFrame) -> pd.DataFrame:
     for col in ["CapFill.cap_fill_base", "CapFill.cap_fill_actual"]:
         if col in df.columns:
             rate_col = col + "_rate"
-            window_us = 5_000_000  
+            window_us = 7_500_000  
 
             ts_series = df["ts"].astype("int64")
             ts_future = ts_series + window_us
