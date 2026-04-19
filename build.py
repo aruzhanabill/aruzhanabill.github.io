@@ -2,17 +2,17 @@ import json
 import math
 from datetime import datetime, timedelta
 from pathlib import Path
+import argparse
 
 import pandas as pd
 
 from utils import OUTPUT_HZ
 
-import pipeline_2025_26 as _p1
+import pipeline_2025_26   as _p1
 import pipeline_2025_26_b as _p2
 import pipeline_2025_26_c as _p3
 import pipeline_2025_26_d as _p4
 import pipeline_2025_26_e as _p5
-
 
 
 SESSIONS = [
@@ -52,7 +52,6 @@ SESSIONS = [
         "events": {},
         "pipeline": _p3,
     },
-
     {
         "id": "cf_3",
         "type": "Cold Flow",
@@ -63,7 +62,7 @@ SESSIONS = [
         "events": {},
         "pipeline": _p4,
     },
-        {
+    {
         "id": "sf_1",
         "type": "Static Fire",
         "label": "4/17/2026",
@@ -74,15 +73,16 @@ SESSIONS = [
         "pipeline": _p5,
     },
 ]
-MAX_POINTS    = 30_000   # overview downsample — fast initial load
-CHUNK_SECONDS = 60       # seconds per high-res chunk file
-CHUNK_HZ      = 300      # Hz stored in chunks (≈ native load-cell rate)
-_CHUNK_STEP   = max(1, OUTPUT_HZ // CHUNK_HZ)  # rows to skip when writing chunks
+
+MAX_POINTS    = 30_000
+CHUNK_SECONDS = 60
+CHUNK_HZ      = 300
+_CHUNK_STEP   = max(1, OUTPUT_HZ // CHUNK_HZ)
 
 DATA_DIR = Path("data")
 
+
 def to_json_safe(series: pd.Series) -> list:
-    """Convert a pandas Series to a JSON-safe Python list (NaN → null)."""
     out = []
     for v in series:
         if v is None or (isinstance(v, float) and math.isnan(v)):
@@ -91,13 +91,19 @@ def to_json_safe(series: pd.Series) -> list:
             out.append(round(float(v), 6))
     return out
 
-def main():
+
+def main(sessions_to_build):
     DATA_DIR.mkdir(exist_ok=True)
 
-    cf_sessions: list[dict] = []
-    sf_sessions: list[dict] = []
+    # Load existing manifest so --only builds don't erase other sessions
+    manifest_path = DATA_DIR / "sessions.json"
+    if manifest_path.exists():
+        with open(manifest_path) as f:
+            manifest = json.load(f)
+    else:
+        manifest = {"cold_flow": [], "static_fire": []}
 
-    for sess in SESSIONS:
+    for sess in sessions_to_build:
         print(f"\n{'='*60}")
         print(f"  {sess['type']}  {sess['label']}")
         print(f"{'='*60}")
@@ -110,7 +116,6 @@ def main():
         t_max = round(float(df_full["t_sec"].max()), 3)
         print(f"  {len(df_full):,} rows  ·  {t_max:.1f} s")
 
-        # Overview: aggressively downsample for fast initial load
         if len(df_full) > MAX_POINTS:
             step = len(df_full) // MAX_POINTS
             df_overview = df_full.iloc[::step].reset_index(drop=True)
@@ -159,10 +164,8 @@ def main():
         size_kb = path.stat().st_size / 1024
         print(f"  Written {path}  ({size_kb:.0f} KB)")
 
-        # High-res chunks: one file per CHUNK_SECONDS, stored at CHUNK_HZ
         chunks_dir = DATA_DIR / f"{sess['id']}_chunks"
         chunks_dir.mkdir(exist_ok=True)
-        # df_full at CHUNK_HZ (skip every _CHUNK_STEP rows)
         df_chunk_base = df_full.iloc[::_CHUNK_STEP].reset_index(drop=True)
         for ci in range(n_chunks):
             c_t0 = ci * CHUNK_SECONDS
@@ -180,13 +183,16 @@ def main():
                 print(f"  Chunks: {ci+1}/{n_chunks}", end="\r")
         print(f"  Written {n_chunks} chunks in {chunks_dir}/  ({CHUNK_HZ} Hz)")
 
+        # Merge this session into the manifest (upsert by id)
         entry = {"id": sess["id"], "label": sess["label"]}
-        if sess["type"] == "Cold Flow":
-            cf_sessions.append(entry)
+        key = "cold_flow" if sess["type"] == "Cold Flow" else "static_fire"
+        existing = manifest[key]
+        idx = next((i for i, e in enumerate(existing) if e["id"] == sess["id"]), None)
+        if idx is not None:
+            existing[idx] = entry
         else:
-            sf_sessions.append(entry)
-    manifest = {"cold_flow": cf_sessions, "static_fire": sf_sessions}
-    manifest_path = DATA_DIR / "sessions.json"
+            existing.append(entry)
+
     with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=2)
     print(f"\n  Written {manifest_path}")
@@ -199,5 +205,11 @@ def main():
     print("    git push")
     print("="*60 + "\n")
 
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--only', nargs='*', help='Session IDs to build (e.g. sf_1 cf_3)')
+    args = parser.parse_args()
+
+    to_build = [s for s in SESSIONS if s['id'] in args.only] if args.only else SESSIONS
+    main(to_build)
