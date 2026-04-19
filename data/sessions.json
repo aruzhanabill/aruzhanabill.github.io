@@ -17,5 +17,10 @@
       "label": "4/10/2026"
     }
   ],
-  "static_fire": []
+  "static_fire": [
+    {
+      "id": "sf_1",
+      "label": "4/17/2026"
+    }
+  ]
 }
