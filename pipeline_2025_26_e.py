@@ -109,7 +109,6 @@ def clean_up(df: pd.DataFrame) -> pd.DataFrame:
         df["injector_delta_p"] = df["FsLoxGn2Transducers.oxtank_1"] - df["FsLoxGn2Transducers.copv_2"]
 
     df["thrust"] = df["LoadCell1.data"] + df["LoadCell2.data"]
-    df["thrust"] = df["thrust"].rolling(window=10).median()
 
     # preserve raw booleans before stacking (used for background highlights)
     for raw_col, new_col in [
