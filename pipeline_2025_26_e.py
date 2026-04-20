@@ -43,28 +43,29 @@ PLOTS = [
         state_columns=["ereg_state_closed", "ereg_state_stage1", "ereg_state_stage2", "state_run"],
     ),
 
-    Plot(
-        "[FsScientific1] Oxtank 1/Chamber Transducer", 
-        ["FsLoxGn2Transducers.oxtank_1"],
+     Plot(
+    "[Pressures] COPV 1",
+    [
+        "FsLoxGn2Transducers.copv_1",
+    ],
         state_columns=_RUN,
-    ),
-    Plot(
-        "[FsScientific1] LOX Tank Transducer",
-        ["FsLoxGn2Transducers.oxtank_2"],
-        state_columns=_RUN,
-    ),
-    Plot(
-        "[FsScientific1] COPV / GN2 Transducer",
-        ["FsLoxGn2Transducers.copv_1"],
-        state_columns=_RUN_GN2,
     ),
 
     Plot(
-        "[FsScientific1] COPV 2/ Injector Transducer",
-        ["FsLoxGn2Transducers.copv_2"],
-        state_columns=_RUN_GN2,  
+    "[Pressures] Ox Tank / Injector / Chamber",
+    [
+        "FsLoxGn2Transducers.oxtank_2",
+        "FsLoxGn2Transducers.oxtank_1",
+        "FsLoxGn2Transducers.copv_2",
+    ],
+        state_columns=_RUN,
     ),
 
+    Plot(
+    "[Pressures] Injector Delta P",
+    ["injector_delta_p"],
+    state_columns=_RUN,
+    ),
     
     Plot(
         "[FsScientific1] Press Pilot Transducer",
@@ -72,34 +73,8 @@ PLOTS = [
         state_columns=_RUN,
     ),
     Plot(
-        "[FsScientific2] Injector Transducers",
-        ["FsInjectorTransducers.injector_1", "FsInjectorTransducers.injector_2"],
-        state_columns=_RUN,
-    ),
-    Plot(
-        "[FsScientific2] Upper CC Transducer",
-        ["FsInjectorTransducers.upper_cc"],
-        state_columns=_RUN,
-    ),
-    Plot(
-        "[CapFill] Capacitive Fill Sensor",
-        ["CapFill.cap_fill_base", "CapFill.cap_fill_actual"],
-        state_columns=_RUN_LOX,
-    ),
-
-    Plot(
-        "[CapFill] Board Temperature",
-        ["CapFill.board_temp"],
-        state_columns=_RUN,
-    ),
-    Plot(
-        "[LoadCells] Load Cell 1",
-        ["LoadCell1.data"],
-        state_columns=_RUN_LOX,
-    ),
-    Plot(
-        "[LoadCells] Load Cell 2",
-        ["LoadCell2.data"],
+        "[LoadCells] Load Cell 1 & 2",
+        ["LoadCell1.data", "LoadCell2.data"],
         state_columns=_RUN_LOX,
     ),
 
@@ -129,6 +104,10 @@ def fetch_and_plot_pipeline(tz: str, start: datetime, window: timedelta):
 def clean_up(df: pd.DataFrame) -> pd.DataFrame:
     df["LoadCell1.data"] = -df["LoadCell1.data"]
     df["LoadCell2.data"] = -df["LoadCell2.data"]
+   
+    if "FsLoxGn2Transducers.oxtank_1" in df.columns and "FsLoxGn2Transducers.copv_2" in df.columns:
+        df["injector_delta_p"] = df["FsLoxGn2Transducers.oxtank_1"] - df["FsLoxGn2Transducers.copv_2"]
+
     df["thrust"] = df["LoadCell1.data"] + df["LoadCell2.data"]
     df["thrust"] = df["thrust"].rolling(window=10).median()
 
