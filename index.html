@@ -436,7 +436,7 @@
 
 <script>
 const DISPLAY_MAX   = 5000;
-const MAX_HR_CHUNKS = 10;
+const MAX_HR_CHUNKS = 20;
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 let _dark = false;
@@ -556,7 +556,7 @@ function buildPlotTraces(plot, t0, t1, maxPts, data) {
       x, y, type: 'scatter', mode: 'lines',
       name: col.split('.').pop(),
       line: { shape: isRelay ? 'hv' : 'linear', width: 1.5 },
-      hovertemplate: `<b>t = %{x:.3f} s</b><br>${col.split('.').pop()}: <b>%{y:.4f}</b><extra></extra>`,
+      hovertemplate: `<b>t = %{x:.3f} s</b><br>${col.split('.').pop()}: <b>%{y:.${col.includes('_cont') ? '8' : '4'}f}</b><extra></extra>`,
     });
   }
   for (const col of stateCols) {
