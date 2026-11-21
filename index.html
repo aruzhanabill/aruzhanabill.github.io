@@ -277,6 +277,7 @@
     }
     .preset-btn:hover { border-color: var(--border-2); color: var(--text); }
     .preset-btn.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+    #btn-csv-view:disabled, #btn-csv-full:disabled { opacity: 0.6; cursor: default; }
 
     .custom-sep { width: 1px; height: 18px; background: var(--border); margin: 0 6px; flex-shrink: 0; }
     .custom-label { color: var(--text-dim); font-size: 12px; }
@@ -414,6 +415,10 @@
       <button id="btn-set">Set</button>
       <span class="custom-sep"></span>
       <button id="btn-refresh-res" class="preset-btn">↑ Refresh Res</button>
+      <span class="custom-sep"></span>
+      <span class="custom-label">Download CSV:</span>
+      <button id="btn-csv-view" class="preset-btn" title="Download the visible time range at about 333 Hz">Current View</button>
+      <button id="btn-csv-full" class="preset-btn" title="Download the whole session at about 333 Hz">Full Session</button>
     </div>
     <div id="slider-row">
       <input type="range" id="pos-slider" min="0" max="1" step="0.1" value="0">
@@ -728,6 +733,91 @@ function exitHighRes(newT0, newT1) {
   reloadFromOverview(newT0, newT1);
 }
 
+// ── CSV download ──────────────────────────────────────────────────────────────
+
+const CSV_FETCH_BATCH = 6;
+const RELAY_COLUMN = /^(FsState\.|FsLoxGn2Transducers\.ereg_(closed|stage_1|stage_2)$)/;
+let _csvBusy = false;
+
+async function loadCsvChunk(sessionId, ci) {
+  if (S.session?.id === sessionId && S.chunkCache.has(ci)) return S.chunkCache.get(ci);
+  const url = `data/${sessionId}_chunks/${String(ci).padStart(4, '0')}.json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`chunk ${ci}: HTTP ${res.status}`);
+  return res.json();
+}
+
+function csvCell(col, value) {
+  if (value === null || value === undefined) return '';
+  // Relay traces are stacked for plotting (even=off, odd=on), so export plain 0/1.
+  return RELAY_COLUMN.test(col) ? String(((value % 2) + 2) % 2) : String(value);
+}
+
+function chunkToCsv(chunk, columns, t0, t1) {
+  const lo = lowerBound(chunk.t_sec, t0);
+  const hi = lowerBound(chunk.t_sec, t1 + 1e-9);
+  const rows = [];
+  for (let i = lo; i < hi; i++) {
+    const cells = [chunk.t_sec[i]];
+    for (const col of columns) cells.push(csvCell(col, chunk[col]?.[i]));
+    rows.push(cells.join(','));
+  }
+  return rows.length ? rows.join('\n') + '\n' : '';
+}
+
+function saveCsv(parts, filename) {
+  const url = URL.createObjectURL(new Blob(parts, { type: 'text/csv' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+async function downloadCsv(fullSession) {
+  if (_csvBusy || !S.session) return;
+  const session = S.session;
+  const t0 = fullSession ? 0 : Math.max(0, S.viewT0);
+  const t1 = fullSession ? session.t_max : Math.min(session.t_max, S.viewT1);
+  if (!(t1 > t0)) return;
+
+  const btn = document.getElementById(fullSession ? 'btn-csv-full' : 'btn-csv-view');
+  const other = document.getElementById(fullSession ? 'btn-csv-view' : 'btn-csv-full');
+  const originalText = btn.textContent;
+  const cs = session.chunk_seconds;
+  const lo = Math.floor(t0 / cs);
+  const hi = Math.min(Math.floor(t1 / cs), session.n_chunks - 1);
+  const total = hi - lo + 1;
+  const columns = Object.keys(session.data).filter(col => col !== 't_sec');
+  const parts = [['t_sec', ...columns].join(',') + '\n'];
+
+  _csvBusy = true;
+  btn.disabled = other.disabled = true;
+  try {
+    for (let start = lo; start <= hi; start += CSV_FETCH_BATCH) {
+      if (S.session !== session) return;
+      btn.textContent = `Preparing ${start - lo}/${total}…`;
+      const ids = [];
+      for (let ci = start; ci <= Math.min(start + CSV_FETCH_BATCH - 1, hi); ci++) ids.push(ci);
+      const chunks = await Promise.all(ids.map(ci => loadCsvChunk(session.id, ci)));
+      for (const chunk of chunks) parts.push(chunkToCsv(chunk, columns, t0, t1));
+    }
+    if (S.session !== session) return;
+    const date  = session.label.replaceAll('/', '-');
+    const range = fullSession ? 'full' : `${t0.toFixed(1)}-${t1.toFixed(1)}s`;
+    saveCsv(parts, `${session.id}_${date}_${range}.csv`);
+  } catch (e) {
+    console.error(e);
+    alert('Could not prepare the CSV. Please try again.');
+  } finally {
+    _csvBusy = false;
+    btn.textContent = originalText;
+    btn.disabled = other.disabled = false;
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 async function init() {
@@ -784,6 +874,8 @@ function wireControls() {
   document.getElementById('btn-back').addEventListener('click', goBack);
   document.getElementById('btn-set').addEventListener('click', applyCustom);
   document.getElementById('btn-refresh-res').addEventListener('click', refreshResolution);
+  document.getElementById('btn-csv-view').addEventListener('click', () => downloadCsv(false));
+  document.getElementById('btn-csv-full').addEventListener('click', () => downloadCsv(true));
   document.getElementById('custom-input').addEventListener('keydown', e => { if (e.key === 'Enter') applyCustom(); });
   document.getElementById('btn-add-marker').addEventListener('click', addMarker);
   document.getElementById('marker-name').addEventListener('keydown', e => { if (e.key === 'Enter') addMarker(); });
