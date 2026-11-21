@@ -41,6 +41,11 @@ PLOTS = [
         state_columns=["ereg_state_closed", "ereg_state_stage1", "ereg_state_stage2", "state_run"],
     ),
     Plot(
+        "[FsScientific1] LOX Tank Transducer 1",
+        ["FsLoxGn2Transducers.oxtank_1"],
+        state_columns=_RUN,
+    ),
+    Plot(
         "[FsScientific1] LOX Tank Transducer",
         ["FsLoxGn2Transducers.oxtank_2"],
         state_columns=_RUN,
