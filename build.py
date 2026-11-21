@@ -13,6 +13,8 @@ import pipeline_2025_26_b as _p2
 import pipeline_2025_26_c as _p3
 import pipeline_2025_26_d as _p4
 import pipeline_2025_26_e as _p5
+import pipeline_2025_26_f as _p6
+
 
 
 SESSIONS = [
@@ -63,6 +65,16 @@ SESSIONS = [
         "pipeline": _p4,
     },
     {
+        "id": "cf_8",
+        "type": "Cold Flow",
+        "label": "11/20/2026",
+        "tz": "America/New_York",
+        "start": datetime(2026, 11, 20, 15, 00),
+        "window": timedelta(minutes=50),
+        "events": {},
+        "pipeline": _p6,
+    },
+    {
         "id": "sf_1",
         "type": "Static Fire",
         "label": "4/17/2026",
@@ -72,6 +84,7 @@ SESSIONS = [
         "events": {},
         "pipeline": _p5,
     },
+
 ]
 
 MAX_POINTS    = 30_000
